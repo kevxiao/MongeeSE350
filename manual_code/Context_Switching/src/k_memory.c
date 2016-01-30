@@ -81,15 +81,19 @@ void memory_init(void)
 	if ((U32)gp_stack & 0x04) { /* 8 bytes alignment */
 		--gp_stack; 
 	}
-  
-	printf("memory_init: heap init starts at 0x%x\n", p_end
-	);
+  #ifdef DEBUG_0
+		printf("memory_init: heap init starts at 0x%x\n\r", p_end);
+	#endif
 	p_heap_head = (mem_blk*)p_end;
 	temp = (mem_blk*)p_end;
-	printf("k_mem_init: ram limit at 0x%x\n", gp_stack);
+	#ifdef DEBUG_0
+		printf("k_mem_init: ram limit at 0x%x\n\r", gp_stack);
+	#endif
 	while( temp + MEM_BLK_SIZE < (mem_blk*)gp_stack){
 		temp->next_blk = (U32*)((unsigned int)temp + MEM_BLK_SIZE); //doesn't seem to work
-		printf("k_mem_init: next block at 0x%x\n", (void *)((*temp).next_blk));
+		#ifdef DEBUG_0
+			printf("k_mem_init: block at 0x%x\n\r", (void*)temp);
+		#endif
 		temp = (mem_blk*)((*temp).next_blk);
 	}
 	(*temp).next_blk = NULL;
@@ -118,15 +122,23 @@ U32 *alloc_stack(U32 size_b)
 }
 
 void *k_request_memory_block(void) {
+	mem_blk* temp = p_heap_head;
 #ifdef DEBUG_0 
-	printf("k_request_memory_block: entering...\n");
+	printf("k_request_memory_block: entering...\n\r");
 #endif /* ! DEBUG_0 */
-	return (void *) NULL;
+	if (NULL == p_heap_head) {
+		return NULL;
+	}
+	p_heap_head = (mem_blk*) p_heap_head->next_blk;
+	return (void*) temp ;
 }
 
 int k_release_memory_block(void *p_mem_blk) {
+	mem_blk* temp = (mem_blk*) p_mem_blk;
 #ifdef DEBUG_0 
-	printf("k_release_memory_block: releasing block @ 0x%x\n", p_mem_blk);
+	printf("k_release_memory_block: releasing block @ 0x%x\n\r", p_mem_blk);
 #endif /* ! DEBUG_0 */
+	temp->next_blk = (U32*) p_heap_head;
+	p_heap_head = temp;
 	return RTX_OK;
 }
