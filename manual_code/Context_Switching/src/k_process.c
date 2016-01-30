@@ -30,6 +30,14 @@ PCB *gp_current_process = NULL; /* always point to the current RUN process */
 PROC_INIT g_proc_table[NUM_TEST_PROCS];
 extern PROC_INIT g_test_procs[NUM_TEST_PROCS];
 
+struct proc_node {
+	PROC_INIT * process;
+	proc_node * next;
+}
+
+proc_node* gp_priority_end[5] = [NULL, NULL, NULL, NULL, NULL];
+proc_node* gp_priority_begin[5] = [NULL, NULL, NULL, NULL, NULL];
+
 /**
  * @biref: initialize all processes in the system
  * NOTE: We assume there are only two user processes in the system in this example.
@@ -60,6 +68,18 @@ void process_init()
 			*(--sp) = 0x0;
 		}
 		(gp_pcbs[i])->mp_sp = sp;
+	}
+	
+	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
+		proc_node * new_node = (proc_node *)0x50;
+		new_node->process = &g_proc_table[i];
+		new_node->next = NULL;
+		if (gp_prioritiy_end[g_proc_table[i].m_priority] != NULL) {
+			gp_prioritiy_end[g_proc_table[i].m_priority]->next = new_node;
+		} else {
+			gp_priority_begin[g_proc_table[i].m_priority] = new_node;
+		}
+		gp_priority_end[g_proc_table[i].m_priority] = new_node;
 	}
 }
 
@@ -146,4 +166,36 @@ int k_release_processor(void)
 	}
 	process_switch(p_pcb_old);
 	return RTX_OK;
+}
+
+int k_set_process_priority (int process_id, int priority)
+{
+	// what should we return from this, and how do we check for null process?
+	int i = 0;
+	proc_node* cur_node = NULL;
+	for ( i = 0; i < 5; ++i) {
+		cur_node = gp_priority_begin[i];
+		while (cur_node != NULL) {
+			if (cur_node->process->m_pid == process_id) {
+				cur_node->process->m_priority = priority;
+				return 1;
+			}
+		}
+	}
+	return -1;
+}
+
+int k_get_process_priority (int process_id)
+{
+	int i = 0;
+	proc_node* cur_node = NULL;
+	for ( i = 0; i < 5; ++i) {
+		cur_node = gp_priority_begin[i];
+		while (cur_node != NULL) {
+			if (cur_node->process->m_pid == process_id) {
+				return cur_node->process->m_priority;
+			}
+		}
+	}
+	return -1;
 }
