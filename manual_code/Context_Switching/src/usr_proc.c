@@ -43,7 +43,7 @@ void proc1(void)
 			uart0_put_string("\n\r");
 			ret_val = release_processor();
 #ifdef DEBUG_0
-			printf("proc1: ret_val=%d\n", ret_val);
+			//printf("proc1: ret_val=%d\n", ret_val);
 #endif /* DEBUG_0 */
 		}
 		uart0_put_char('A' + i%26);
@@ -64,7 +64,7 @@ void proc2(void)
 			uart0_put_string("\n\r");
 			ret_val = release_processor();
 #ifdef DEBUG_0
-			printf("proc2: ret_val=%d\n", ret_val);
+			//printf("proc2: ret_val=%d\n", ret_val);
 #endif /* DEBUG_0 */
 		}
 		uart0_put_char('0' + i%10);

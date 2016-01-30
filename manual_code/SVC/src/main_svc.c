@@ -24,6 +24,7 @@ int main()
   uart0_init();
   init_printf(NULL, putc);
   __enable_irq();
+	mem_init((void *)&Image$$RW_IRAM1$$ZI$$Limit);
   
   // transit to unprivileged level, default MSP is used
   __set_CONTROL(__get_CONTROL() | BIT(0));  

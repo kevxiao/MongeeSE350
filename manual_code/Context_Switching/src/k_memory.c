@@ -44,8 +44,18 @@ U32 *gp_stack; /* The last allocated stack low address. 8 bytes aligned */
 
 */
 
+extern unsigned int MEM_BLK_SIZE = 128;
+
+typedef struct mem_blk
+{
+	U32* next_blk;
+} mem_blk;
+
+extern mem_blk* p_heap_head = 0;
+
 void memory_init(void)
 {
+	mem_blk* temp;
 	U8 *p_end = (U8 *)&Image$$RW_IRAM1$$ZI$$Limit;
 	int i;
   
@@ -72,8 +82,17 @@ void memory_init(void)
 		--gp_stack; 
 	}
   
-	/* allocate memory for heap, not implemented yet*/
-  
+	printf("memory_init: heap init starts at 0x%x\n", p_end
+	);
+	p_heap_head = (mem_blk*)p_end;
+	temp = (mem_blk*)p_end;
+	printf("k_mem_init: ram limit at 0x%x\n", gp_stack);
+	while( temp + MEM_BLK_SIZE < (mem_blk*)gp_stack){
+		temp->next_blk = (U32*)((unsigned int)temp + MEM_BLK_SIZE); //doesn't seem to work
+		printf("k_mem_init: next block at 0x%x\n", (void *)((*temp).next_blk));
+		temp = (mem_blk*)((*temp).next_blk);
+	}
+	(*temp).next_blk = NULL;
 }
 
 /**

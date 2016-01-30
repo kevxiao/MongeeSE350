@@ -11,6 +11,10 @@ typedef unsigned int U32;
 
 #define __SVC_0  __svc_indirect(0)
 
+extern int k_mem_init(void *);
+#define mem_init(p_mem_blk) _mem_init((U32)k_mem_init, p_mem_blk)
+extern int _mem_init(U32 p_func, void *p_mem_blk) __SVC_0;
+
 extern int k_release_processor(void);
 #define release_processor() _release_processor((U32)k_release_processor)
 extern int __SVC_0 _release_processor(U32 p_func);

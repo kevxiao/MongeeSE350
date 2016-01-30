@@ -18,7 +18,33 @@
   This symbol is defined in the scatter file, 
   refer to RVCT Linker User Guide
 */  
-extern unsigned int Image$$RW_IRAM1$$ZI$$Limit;  
+extern unsigned int Image$$RW_IRAM1$$ZI$$Limit;
+
+extern unsigned int MEM_BLK_SIZE = 128;
+
+typedef struct mem_blk
+{
+	uint32_t* next_blk;
+} mem_blk;
+
+extern mem_blk* p_mem_head = 0;
+
+int k_mem_init(void* p_mem_blk)
+{
+	mem_blk * temp = (mem_blk *) p_mem_blk;
+	printf("k_mem_init: init starts at 0x%x\n", p_mem_blk);
+	p_mem_head = temp;
+	printf("k_mem_init: ram limit at 0x%x\n", &Image$$RW_IRAM1$$ZI$$Limit);
+	while((unsigned int) p_mem_blk + MEM_BLK_SIZE < (unsigned int) &Image$$RW_IRAM1$$ZI$$Limit){
+		temp = (mem_blk *) p_mem_blk;
+		temp->next_blk = (uint32_t *)((unsigned int)p_mem_blk + MEM_BLK_SIZE); //doesn't seem to work
+		printf("k_mem_init: next block at 0x%x\n", (void *)((*temp).next_blk));
+		p_mem_blk = (*temp).next_blk;
+	}
+	(*temp).next_blk = NULL;
+	
+	return 0;
+}
 
 int k_release_processor(void)
 {
@@ -29,6 +55,7 @@ int k_release_processor(void)
 void* k_request_memory_block(void) {
   unsigned int end_addr = (unsigned int) &Image$$RW_IRAM1$$ZI$$Limit;
 	printf("k_request_memory_block: image ends at 0x%x\n", end_addr);
+	
 	return (void *)0;
 }
 
