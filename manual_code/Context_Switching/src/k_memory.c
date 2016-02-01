@@ -141,16 +141,20 @@ void *k_request_memory_block(void) {
 int k_release_memory_block(void *p_mem_blk) {
 	mem_blk* temp = (mem_blk*) p_mem_blk;
 	int i;
+	PCB* cur_pcb = NULL;
 #ifdef DEBUG_0 
 	printf("k_release_memory_block: releasing block @ 0x%x\n\r", p_mem_blk);
 #endif /* ! DEBUG_0 */
 	temp->next_blk = (U32*) p_heap_head;
 	p_heap_head = temp;
-	for (i=0; i < sizeof(gp_pcbs[0])/sizeof(gp_pcbs); i++){
-			if (gp_pcbs[i]->m_state == BLOCKED){
-					gp_pcbs[i]->m_state = RDY;
-					break;
+	for (i=0; i < 5; i++){
+		cur_pcb = gp_priority_begin[i];
+		while(cur_pcb != NULL){
+			if(cur_pcb->m_state == BLOCKED) {
+				cur_pcb->m_state == RDY;
+				return RTX_OK;
 			}
+		}
 	}
 	return RTX_OK;
 }
