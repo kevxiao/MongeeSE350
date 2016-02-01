@@ -151,7 +151,7 @@ int k_release_memory_block(void *p_mem_blk) {
 		cur_pcb = gp_priority_begin[i];
 		while(cur_pcb != NULL){
 			if(cur_pcb->m_state == BLOCKED) {
-				cur_pcb->m_state == RDY;
+				cur_pcb->m_state = RDY;
 				return RTX_OK;
 			}
 		}

@@ -30,8 +30,8 @@ PCB *gp_current_process = NULL; /* always point to the current RUN process */
 PROC_INIT g_proc_table[NUM_TEST_PROCS];
 extern PROC_INIT g_test_procs[NUM_TEST_PROCS];
 
-PCB* gp_priority_end[5] = [NULL, NULL, NULL, NULL, NULL];
-PCB* gp_priority_begin[5] = [NULL, NULL, NULL, NULL, NULL];
+PCB* gp_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
+PCB* gp_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 
 /**
  * @biref: initialize all processes in the system
@@ -67,8 +67,8 @@ void process_init()
 		(gp_pcbs[i])->mp_sp = sp;
 		
 		(gp_pcbs[i])->mp_next = NULL;
-		if (gp_prioritiy_end[(gp_pcbs[i])->m_priority] != NULL) {
-			gp_prioritiy_end[(gp_pcbs[i])->m_priority]->next = (gp_pcbs[i]);
+		if (gp_priority_end[(gp_pcbs[i])->m_priority] != NULL) {
+			gp_priority_end[(gp_pcbs[i])->m_priority]->mp_next = (gp_pcbs[i]);
 		} else {
 			gp_priority_begin[(gp_pcbs[i])->m_priority] = (gp_pcbs[i]);
 		}
@@ -87,7 +87,8 @@ PCB *scheduler(void)
 {
 	PCB* cur_pcb = NULL;
 	PCB* prev_pcb = NULL;
-	for(int i=0;i<5;++i){
+	int i;
+	for(i=0;i<NUM_PRIORITIES;++i){
 		cur_pcb = gp_priority_begin[i];
 		prev_pcb = NULL;
 		while(cur_pcb != NULL){
@@ -113,7 +114,7 @@ PCB *scheduler(void)
 			}
 			
 			prev_pcb = cur_pcb;
-			cur_pcb = cur_pcb->next;
+			cur_pcb = cur_pcb->mp_next;
 		}
 	}
 	return NULL;	
@@ -189,7 +190,7 @@ int k_set_process_priority (int process_id, int priority)
 	if((process_id == 0 && priority != 4)|| (process_id != 0 && priority == 4)) {
 		return -1;
 	}
-	for ( i = 0; i < 5; ++i) {
+	for ( i = 0; i < NUM_PRIORITIES; ++i) {
 		cur_pcb = gp_priority_begin[i];
 		prev_pcb = NULL;
 		while (cur_pcb != NULL) {
@@ -228,7 +229,7 @@ int k_get_process_priority (int process_id)
 {
 	int i = 0;
 	PCB* cur_pcb = NULL;
-	for ( i = 0; i < 5; ++i) {
+	for ( i = 0; i < NUM_PRIORITIES; ++i) {
 		cur_pcb = gp_priority_begin[i];
 		while (cur_pcb != NULL) {
 			if (cur_pcb->m_pid == process_id) {

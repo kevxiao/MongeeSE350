@@ -10,6 +10,7 @@
 #define NULL 0
 #define NUM_TEST_PROCS 2
 /* Process Priority. The bigger the number is, the lower the priority is*/
+#define NUM_PRIORITIES 5
 #define HIGH    0
 #define MEDIUM  1
 #define LOW     2

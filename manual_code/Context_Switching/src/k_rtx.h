@@ -15,6 +15,7 @@
 
 #define NULL 0
 #define NUM_TEST_PROCS 2
+#define NUM_PRIORITIES 5
 
 #ifdef DEBUG_0
 #define USR_SZ_STACK 0x200         /* user proc stack size 512B   */
@@ -50,10 +51,5 @@ typedef struct proc_init
 	int m_stack_size;       /* size of stack in words */
 	void (*mpf_start_pc) ();/* entry point of the process */    
 } PROC_INIT;
-
-typedef struct proc_node {
-	PROC_INIT * process;
-	PROC_NODE * next;
-} PROC_NODE;
 
 #endif // ! K_RTX_H_
