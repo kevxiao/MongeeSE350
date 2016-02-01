@@ -44,7 +44,9 @@ U32 *gp_stack; /* The last allocated stack low address. 8 bytes aligned */
 
 */
 
-extern unsigned int MEM_BLK_SIZE = 128;
+unsigned int MEM_BLK_SIZE = 128;
+
+extern PCB* gp_current_process;
 
 typedef struct mem_blk
 {
@@ -123,22 +125,32 @@ U32 *alloc_stack(U32 size_b)
 
 void *k_request_memory_block(void) {
 	mem_blk* temp = p_heap_head;
+	//PROC_STATE_E before = gp_current_process->m_state;
 #ifdef DEBUG_0 
 	printf("k_request_memory_block: entering...\n\r");
 #endif /* ! DEBUG_0 */
-	if (NULL == p_heap_head) {
-		return NULL;
+	while (NULL == p_heap_head) {
+		gp_current_process->m_state = BLOCKED;
+		k_release_processor();
 	}
+	//gp_current_process->m_state = before;
 	p_heap_head = (mem_blk*) p_heap_head->next_blk;
 	return (void*) temp ;
 }
 
 int k_release_memory_block(void *p_mem_blk) {
 	mem_blk* temp = (mem_blk*) p_mem_blk;
+	int i;
 #ifdef DEBUG_0 
 	printf("k_release_memory_block: releasing block @ 0x%x\n\r", p_mem_blk);
 #endif /* ! DEBUG_0 */
 	temp->next_blk = (U32*) p_heap_head;
 	p_heap_head = temp;
+	for (i=0; i < sizeof(gp_pcbs[0])/sizeof(gp_pcbs); i++){
+			if (gp_pcbs[i]->m_state == BLOCKED){
+					gp_pcbs[i]->m_state = RDY;
+					break;
+			}
+	}
 	return RTX_OK;
 }

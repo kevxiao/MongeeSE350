@@ -23,7 +23,7 @@
 #endif /* DEBUG_0 */
 
 /* ----- Global Variables ----- */
-PCB **gp_pcbs;                  /* array of pcbs */
+PCB **gp_pcbs;                  /* array of pointers to pcbs */
 PCB *gp_current_process = NULL; /* always point to the current RUN process */
 
 /* process initialization table */
