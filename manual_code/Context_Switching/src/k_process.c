@@ -30,13 +30,8 @@ PCB *gp_current_process = NULL; /* always point to the current RUN process */
 PROC_INIT g_proc_table[NUM_TEST_PROCS];
 extern PROC_INIT g_test_procs[NUM_TEST_PROCS];
 
-struct proc_node {
-	PROC_INIT * process;
-	proc_node * next;
-}
-
-proc_node* gp_priority_end[5] = [NULL, NULL, NULL, NULL, NULL];
-proc_node* gp_priority_begin[5] = [NULL, NULL, NULL, NULL, NULL];
+PCB* gp_priority_end[5] = [NULL, NULL, NULL, NULL, NULL];
+PCB* gp_priority_begin[5] = [NULL, NULL, NULL, NULL, NULL];
 
 /**
  * @biref: initialize all processes in the system
@@ -53,12 +48,14 @@ void process_init()
 		g_proc_table[i].m_pid = g_test_procs[i].m_pid;
 		g_proc_table[i].m_stack_size = g_test_procs[i].m_stack_size;
 		g_proc_table[i].mpf_start_pc = g_test_procs[i].mpf_start_pc;
+		g_proc_table[i].m_priority = g_test_procs[i].m_priority;
 	}
   
 	/* initilize exception stack frame (i.e. initial context) for each process */
 	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
 		int j;
 		(gp_pcbs[i])->m_pid = (g_proc_table[i]).m_pid;
+		(gp_pcbs[i])->m_priority = (g_proc_table[i]).m_priority;
 		(gp_pcbs[i])->m_state = NEW;
 		
 		sp = alloc_stack((g_proc_table[i]).m_stack_size);
@@ -68,18 +65,14 @@ void process_init()
 			*(--sp) = 0x0;
 		}
 		(gp_pcbs[i])->mp_sp = sp;
-	}
-	
-	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
-		proc_node * new_node = (proc_node *)0x50;
-		new_node->process = &g_proc_table[i];
-		new_node->next = NULL;
-		if (gp_prioritiy_end[g_proc_table[i].m_priority] != NULL) {
-			gp_prioritiy_end[g_proc_table[i].m_priority]->next = new_node;
+		
+		(gp_pcbs[i])->mp_next = NULL;
+		if (gp_prioritiy_end[(gp_pcbs[i])->m_priority] != NULL) {
+			gp_prioritiy_end[(gp_pcbs[i])->m_priority]->next = (gp_pcbs[i]);
 		} else {
-			gp_priority_begin[g_proc_table[i].m_priority] = new_node;
+			gp_priority_begin[(gp_pcbs[i])->m_priority] = (gp_pcbs[i]);
 		}
-		gp_priority_end[g_proc_table[i].m_priority] = new_node;
+		gp_priority_end[(gp_pcbs[i])->m_priority] = (gp_pcbs[i]);
 	}
 }
 
@@ -92,18 +85,38 @@ void process_init()
 
 PCB *scheduler(void)
 {
-	if (gp_current_process == NULL) {
-		gp_current_process = gp_pcbs[0]; 
-		return gp_pcbs[0];
+	PCB* cur_pcb = NULL;
+	PCB* prev_pcb = NULL;
+	for(int i=0;i<5;++i){
+		cur_pcb = gp_priority_begin[i];
+		prev_pcb = NULL;
+		while(cur_pcb != NULL){
+			if(cur_pcb->m_state != BLOCKED){
+				if(prev_pcb != NULL){
+					prev_pcb->mp_next = cur_pcb->mp_next;
+				}else{
+					gp_priority_begin[i] = cur_pcb->mp_next;
+					if(gp_priority_begin[i] == NULL){
+						gp_priority_end[i] = NULL;
+					}
+				}
+				cur_pcb->mp_next = NULL;
+				
+				if(gp_priority_end[i] != NULL){
+					gp_priority_end[i]->mp_next = cur_pcb;
+				}else{
+					gp_priority_begin[i] = cur_pcb;
+					gp_priority_end[i] = cur_pcb;
+				}
+				
+				return cur_pcb;
+			}
+			
+			prev_pcb = cur_pcb;
+			cur_pcb = cur_pcb->next;
+		}
 	}
-
-	if ( gp_current_process == gp_pcbs[0] ) {
-		return gp_pcbs[1];
-	} else if ( gp_current_process == gp_pcbs[1] ) {
-		return gp_pcbs[0];
-	} else {
-		return NULL;
-	}
+	return NULL;	
 }
 
 /*@brief: switch out old pcb (p_pcb_old), run the new pcb (gp_current_process)
@@ -170,16 +183,42 @@ int k_release_processor(void)
 
 int k_set_process_priority (int process_id, int priority)
 {
-	// what should we return from this, and how do we check for null process?
 	int i = 0;
-	proc_node* cur_node = NULL;
+	PCB* cur_pcb = NULL;
+	PCB* prev_pcb = NULL;
+	if((process_id == 0 && priority != 4)|| (process_id != 0 && priority == 4)) {
+		return -1;
+	}
 	for ( i = 0; i < 5; ++i) {
-		cur_node = gp_priority_begin[i];
-		while (cur_node != NULL) {
-			if (cur_node->process->m_pid == process_id) {
-				cur_node->process->m_priority = priority;
-				return 1;
+		cur_pcb = gp_priority_begin[i];
+		prev_pcb = NULL;
+		while (cur_pcb != NULL) {
+			if (cur_pcb->m_pid == process_id) {
+				if(cur_pcb->m_priority == priority) {
+					return 0;
+				}
+				cur_pcb->m_priority = priority;
+				if(prev_pcb != NULL){
+					prev_pcb->mp_next = cur_pcb->mp_next;
+				}else{
+					gp_priority_begin[i] = cur_pcb->mp_next;
+					if(gp_priority_begin[i] == NULL){
+						gp_priority_end[i] = NULL;
+					}
+				}
+				cur_pcb->mp_next = NULL;
+				
+				if(gp_priority_end[priority] != NULL){
+					gp_priority_end[priority]->mp_next = cur_pcb;
+				}else{
+					gp_priority_begin[priority] = cur_pcb;
+					gp_priority_end[priority] = cur_pcb;
+				}
+				
+				return 0;
 			}
+			prev_pcb = cur_pcb;
+			cur_pcb = cur_pcb->mp_next;
 		}
 	}
 	return -1;
@@ -188,13 +227,14 @@ int k_set_process_priority (int process_id, int priority)
 int k_get_process_priority (int process_id)
 {
 	int i = 0;
-	proc_node* cur_node = NULL;
+	PCB* cur_pcb = NULL;
 	for ( i = 0; i < 5; ++i) {
-		cur_node = gp_priority_begin[i];
-		while (cur_node != NULL) {
-			if (cur_node->process->m_pid == process_id) {
-				return cur_node->process->m_priority;
+		cur_pcb = gp_priority_begin[i];
+		while (cur_pcb != NULL) {
+			if (cur_pcb->m_pid == process_id) {
+				return cur_pcb->m_priority;
 			}
+			cur_pcb = cur_pcb->mp_next;
 		}
 	}
 	return -1;
