@@ -92,7 +92,7 @@ void memory_init(void)
 		printf("k_mem_init: ram limit at 0x%x\n\r", gp_stack);
 	#endif
 	while( temp + MEM_BLK_SIZE < (mem_blk*)gp_stack){
-		temp->next_blk = (U32*)((unsigned int)temp + MEM_BLK_SIZE); //doesn't seem to work
+		temp->next_blk = (U32*)((unsigned int)temp + MEM_BLK_SIZE);
 		#ifdef DEBUG_0
 			printf("k_mem_init: block at 0x%x\n\r", (void*)temp);
 		#endif
@@ -133,7 +133,6 @@ void *k_request_memory_block(void) {
 		gp_current_process->m_state = BLOCKED;
 		k_release_processor();
 	}
-	//gp_current_process->m_state = before;
 	p_heap_head = (mem_blk*) p_heap_head->next_blk;
 	return (void*) temp ;
 }
@@ -147,13 +146,14 @@ int k_release_memory_block(void *p_mem_blk) {
 #endif /* ! DEBUG_0 */
 	temp->next_blk = (U32*) p_heap_head;
 	p_heap_head = temp;
-	for (i=0; i < 5; i++){
+	for (i=0; i < NUM_PRIORITIES; i++){
 		cur_pcb = gp_priority_begin[i];
 		while(cur_pcb != NULL){
 			if(cur_pcb->m_state == BLOCKED) {
 				cur_pcb->m_state = RDY;
 				return RTX_OK;
 			}
+			cur_pcb = cur_pcb->mp_next;
 		}
 	}
 	return RTX_OK;

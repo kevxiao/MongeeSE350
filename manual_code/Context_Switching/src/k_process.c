@@ -66,6 +66,7 @@ void process_init()
 		}
 		(gp_pcbs[i])->mp_sp = sp;
 		
+		// set priority and put into correct list
 		(gp_pcbs[i])->mp_next = NULL;
 		if (gp_priority_end[(gp_pcbs[i])->m_priority] != NULL) {
 			gp_priority_end[(gp_pcbs[i])->m_priority]->mp_next = (gp_pcbs[i]);
@@ -88,9 +89,11 @@ PCB *scheduler(void)
 	PCB* cur_pcb = NULL;
 	PCB* prev_pcb = NULL;
 	int i;
+	// go through priorities in order and find the first unblocked process
 	for(i=0;i<NUM_PRIORITIES;++i){
 		cur_pcb = gp_priority_begin[i];
 		prev_pcb = NULL;
+		// find first unblocked process for priority i
 		while(cur_pcb != NULL){
 			if(cur_pcb->m_state != BLOCKED){
 				if(prev_pcb != NULL){
@@ -107,9 +110,9 @@ PCB *scheduler(void)
 					gp_priority_end[i]->mp_next = cur_pcb;
 				}else{
 					gp_priority_begin[i] = cur_pcb;
-					gp_priority_end[i] = cur_pcb;
 				}
-				
+				gp_priority_end[i] = cur_pcb;
+
 				return cur_pcb;
 			}
 			
@@ -135,7 +138,7 @@ int process_switch(PCB *p_pcb_old)
 	state = gp_current_process->m_state;
 
 	if (state == NEW) {
-		if (gp_current_process != p_pcb_old && p_pcb_old->m_state != NEW) {
+		if (gp_current_process != p_pcb_old && p_pcb_old->m_state != NEW && p_pcb_old->m_state != BLOCKED) {
 			p_pcb_old->m_state = RDY;
 			p_pcb_old->mp_sp = (U32 *) __get_MSP();
 		}
@@ -148,10 +151,12 @@ int process_switch(PCB *p_pcb_old)
 
 	if (gp_current_process != p_pcb_old) {
 		if (state == RDY){ 		
-			p_pcb_old->m_state = RDY; 
+			if (p_pcb_old->m_state != BLOCKED){
+				p_pcb_old->m_state = RDY;
+			}
 			p_pcb_old->mp_sp = (U32 *) __get_MSP(); // save the old process's sp
 			gp_current_process->m_state = RUN;
-			__set_MSP((U32) gp_current_process->mp_sp); //switch to the new proc's stack    
+			__set_MSP((U32) gp_current_process->mp_sp); //switch to the new proc's stack
 		} else {
 			gp_current_process = p_pcb_old; // revert back to the old proc on error
 			return RTX_ERR;
@@ -175,13 +180,20 @@ int k_release_processor(void)
 		gp_current_process = p_pcb_old; // revert back to the old process
 		return RTX_ERR;
 	}
-        if ( p_pcb_old == NULL ) {
+  if ( p_pcb_old == NULL ) {
 		p_pcb_old = gp_current_process;
 	}
 	process_switch(p_pcb_old);
 	return RTX_OK;
 }
 
+/**
+ * @brief set_process_priority(). 
+ * @param process_id, the pid for the process to set the priority
+ * 				priority, the priority to set for the process
+ * @return RTX_ERR on error and zero on success
+ * POST: process with pricess_id gets set to the specified priority and moved to the correct queue
+ */
 int k_set_process_priority (int process_id, int priority)
 {
 	int i = 0;
@@ -216,15 +228,20 @@ int k_set_process_priority (int process_id, int priority)
 					gp_priority_end[priority] = cur_pcb;
 				}
 				
-				return 0;
+				return RTX_OK;
 			}
 			prev_pcb = cur_pcb;
 			cur_pcb = cur_pcb->mp_next;
 		}
 	}
-	return -1;
+	return RTX_ERR;
 }
 
+/**
+ * @brief get_process_priority(). 
+ * @param process_id, the pid for the process to get the priority
+ * @return RTX_ERR on error and the priority of the process on success
+ */
 int k_get_process_priority (int process_id)
 {
 	int i = 0;
@@ -238,5 +255,5 @@ int k_get_process_priority (int process_id)
 			cur_pcb = cur_pcb->mp_next;
 		}
 	}
-	return -1;
+	return RTX_ERR;
 }

@@ -29,6 +29,17 @@ void set_test_procs() {
 	g_test_procs[1].mpf_start_pc = &proc2;
 }
 
+void nullproc(void)
+{
+	while (1) {
+		k_release_processor();
+	}
+}
+
+void process1(void){
+	
+}
+	
 
 /**
  * @brief: a process that prints five uppercase letters
@@ -50,13 +61,13 @@ void proc1(void)
 			printf("im proc 1 and i got mem at 0x%x\n\r", temp);
 		}
 		if ( i != 0 && i%5 == 0 ) {
-			//uart0_put_string("\n\r");
+			uart0_put_string("\n\r");
 			ret_val = release_processor();
 #ifdef DEBUG_0
-			//printf("proc1: ret_val=%d\n", ret_val);
+			printf("proc1: ret_val=%d\n", ret_val);
 #endif /* DEBUG_0 */
 		}
-		//uart0_put_char('A' + i%26);
+		uart0_put_char('A' + i%26);
 		i++;
 	}
 }
@@ -71,13 +82,13 @@ void proc2(void)
 	int ret_val = 20;
 	while ( 1) {
 		if ( i != 0 && i%5 == 0 ) {
-			//uart0_put_string("\n\r");
+			uart0_put_string("\n\r");
 			ret_val = release_processor();
 #ifdef DEBUG_0
-			//printf("proc2: ret_val=%d\n", ret_val);
+			printf("proc2: ret_val=%d\n", ret_val);
 #endif /* DEBUG_0 */
 		}
-		//uart0_put_char('0' + i%10);
+		uart0_put_char('0' + i%10);
 		i++;
 	}
 }
