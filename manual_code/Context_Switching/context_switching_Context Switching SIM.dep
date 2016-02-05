@@ -37,7 +37,7 @@ I (src\uart_polling.h)(0x5693B656)
 I (C:\Software\Keil\ARM\ARMCC\bin\..\include\stdint.h)(0x4EB16D34)
 I (src\k_memory.h)(0x56B51039)
 I (src\k_process.h)(0x56B5103F)
-F (.\src\k_memory.c)(0x56B513BD)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork -I C:\Software\Keil\ARM\RV31\INC -I C:\Software\Keil\ARM\CMSIS\Include -I C:\Software\Keil\ARM\Inc\NXP\LPC17xx -DDEBUG_0 -o "k_memory.o" --omf_browse "k_memory.crf" --depend "k_memory.d")
+F (.\src\k_memory.c)(0x56B51C2C)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork -I C:\Software\Keil\ARM\RV31\INC -I C:\Software\Keil\ARM\CMSIS\Include -I C:\Software\Keil\ARM\Inc\NXP\LPC17xx -DDEBUG_0 -o "k_memory.o" --omf_browse "k_memory.crf" --depend "k_memory.d")
 I (src\k_memory.h)(0x56B51039)
 I (src\k_rtx.h)(0x56B21889)
 I (src\k_process.h)(0x56B5103F)

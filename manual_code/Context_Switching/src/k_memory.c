@@ -54,7 +54,9 @@ typedef struct mem_blk
 	U32* next_blk;
 } mem_blk;
 
-extern mem_blk* p_heap_head = 0;
+extern mem_blk* p_heap_head = NULL;
+mem_blk** blocks_in_use;
+int numBlocks = 0;
 
 void memory_init(void)
 {
@@ -103,6 +105,7 @@ void memory_init(void)
 
 void heap_init() {
 	mem_blk* temp;
+	int i=0;
   #ifdef DEBUG_0
 		printf("memory_init: heap init starts at 0x%x\n\r", p_end);
 	#endif
@@ -117,6 +120,8 @@ void heap_init() {
 			//printf("k_mem_init: block at 0x%x\n\r", (void*)temp);
 		#endif
 		temp = (mem_blk*)((*temp).next_blk);
+		blocks_in_use[i++] = NULL;
+		numBlocks++;
 	}
 	(*temp).next_blk = NULL;
 }
@@ -146,8 +151,8 @@ U32 *alloc_stack(U32 size_b)
 }
 
 void *k_request_memory_block(void) {
+	int i = 0;
 	mem_blk* temp = p_heap_head;
-	//PROC_STATE_E before = gp_current_process->m_state;
 #ifdef DEBUG_0 
 	printf("k_request_memory_block: entering...\n\r");
 #endif /* ! DEBUG_0 */
@@ -156,7 +161,13 @@ void *k_request_memory_block(void) {
 		gp_current_process->m_state = BLOCKED;
 		k_release_processor();
 	}
-
+	while(blocks_in_use[i] != NULL && i < numBlocks){
+		if (i >= numBlocks){
+			printf("MAJOR ERROR\n\r");
+		}
+		i++;
+	}
+	blocks_in_use[i] = temp;
 	p_heap_head = (mem_blk*) p_heap_head->next_blk;
 	return (void*) temp ;
 }
@@ -164,13 +175,24 @@ void *k_request_memory_block(void) {
 int k_release_memory_block(void *p_mem_blk) {
 	mem_blk* temp = (mem_blk*) p_mem_blk;
 	int i;
+	int found = 0;
 	PCB* cur_pcb = NULL;
 #ifdef DEBUG_0 
 	printf("k_release_memory_block: releasing block @ 0x%x\n\r", p_mem_blk);
 #endif /* ! DEBUG_0 */
+	for (i=0; i < numBlocks; i++){
+		if (blocks_in_use[i] == temp){
+			blocks_in_use[i] = NULL;
+			found++;
+			break;
+		}
+	}
+	if(found > 0){
+		return RTX_ERR;
+	}
 	temp->next_blk = (U32*) p_heap_head;
 	p_heap_head = temp;
-	/*for (i=0; i < NUM_PRIORITIES; i++){
+	for (i=0; i < NUM_PRIORITIES; i++){
 		cur_pcb = gp_priority_begin[i];
 		while(cur_pcb != NULL){
 			if(cur_pcb->m_state == BLOCKED) {
@@ -179,7 +201,7 @@ int k_release_memory_block(void *p_mem_blk) {
 			}
 			cur_pcb = cur_pcb->mp_next;
 		}
-	}*/
+	}
 	return RTX_OK;
 }
 
