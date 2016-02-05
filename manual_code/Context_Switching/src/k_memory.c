@@ -118,6 +118,7 @@ void heap_init() {
 		#endif
 		temp = (mem_blk*)((*temp).next_blk);
 	}
+	(*temp).next_blk = NULL;
 }
 
 /**
@@ -148,6 +149,8 @@ void *k_request_memory_block(void) {
 #ifdef DEBUG_0 
 	printf("k_request_memory_block: entering...\n\r");
 #endif /* ! DEBUG_0 */
+	//gp_current_process->m_state = BLOCKED;
+	//k_release_processor();
 	while (NULL == p_heap_head) {
 		printf("k_request_memory_block: no moar memory\n\r");
 		gp_current_process->m_state = BLOCKED;
@@ -167,7 +170,7 @@ int k_release_memory_block(void *p_mem_blk) {
 #endif /* ! DEBUG_0 */
 	temp->next_blk = (U32*) p_heap_head;
 	p_heap_head = temp;
-	for (i=0; i < NUM_PRIORITIES; i++){
+	/*for (i=0; i < NUM_PRIORITIES; i++){
 		cur_pcb = gp_priority_begin[i];
 		while(cur_pcb != NULL){
 			if(cur_pcb->m_state == BLOCKED) {
@@ -176,6 +179,10 @@ int k_release_memory_block(void *p_mem_blk) {
 			}
 			cur_pcb = cur_pcb->mp_next;
 		}
-	}
+	}*/
 	return RTX_OK;
+}
+
+void dumbFunc(void) {
+	gp_current_process->m_state = BLOCKED;
 }

@@ -53,7 +53,9 @@ void proc1(void)
 	printf("im proc 1 and i got mem at 0x%x\n\r", temp);
 	k_release_memory_block(temp);
 	while ( 1) {
-		void* temp = k_request_memory_block();
+		temp = k_request_memory_block();
+		//dumbFunc();
+		//ret_val = release_processor();
 		if (NULL == temp) {
 			printf("im proc 1 and i got some null going on here\n\r");
 		}

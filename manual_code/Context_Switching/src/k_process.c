@@ -98,6 +98,9 @@ PCB *scheduler(void)
 			if(cur_pcb->m_state != BLOCKED){
 				if(prev_pcb != NULL){
 					prev_pcb->mp_next = cur_pcb->mp_next;
+					if (prev_pcb->mp_next == NULL) {
+						gp_priority_end[i] = prev_pcb;
+					}
 				}else{
 					gp_priority_begin[i] = cur_pcb->mp_next;
 					if(gp_priority_begin[i] == NULL){
