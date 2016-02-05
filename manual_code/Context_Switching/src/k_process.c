@@ -141,7 +141,7 @@ int process_switch(PCB *p_pcb_old)
 	state = gp_current_process->m_state;
 
 	if (state == NEW) {
-		if (gp_current_process != p_pcb_old && p_pcb_old->m_state != NEW && p_pcb_old->m_state != BLOCKED) {
+		if (gp_current_process != p_pcb_old && p_pcb_old->m_state != NEW) {
 			p_pcb_old->m_state = RDY;
 			p_pcb_old->mp_sp = (U32 *) __get_MSP();
 		}
@@ -165,7 +165,6 @@ int process_switch(PCB *p_pcb_old)
 			return RTX_ERR;
 		}
 	}
-	printf("lol1\n\r");
 	return RTX_OK;
 }
 /**
@@ -188,9 +187,7 @@ int k_release_processor(void)
 		p_pcb_old = gp_current_process;
 	}
 	
-	printf("lol0.5: %d\n\r", gp_current_process->m_pid);
 	process_switch(p_pcb_old);
-	printf("lol2: %d\n\r", gp_current_process->m_pid);
 	return RTX_OK;
 }
 

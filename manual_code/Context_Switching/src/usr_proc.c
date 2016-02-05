@@ -39,58 +39,74 @@ void nullproc(void)
 void process1(void){
 	
 }
+
+void proc1(void) {
+	while(1) {
+		#ifdef DEBUG_0
+			printf("Requesting block of memory - this is proc1\n");
+		#endif
+		request_memory_block();
+		release_processor();
+	}
+}
+
+void proc2(void) {
+	while(1) {
+		
+		#ifdef DEBUG_0
+			printf("This is process 2\n");
+		#endif
+		release_processor();
+	}
+}
 	
 
 /**
  * @brief: a process that prints five uppercase letters
  *         and then yields the cpu.
  */
-void proc1(void)
-{
-	int i = 0;
-	int ret_val = 10;
-	void* temp = k_request_memory_block();
-	printf("im proc 1 and i got mem at 0x%x\n\r", temp);
-	k_release_memory_block(temp);
-	while ( 1) {
-		temp = k_request_memory_block();
-		//dumbFunc();
-		//ret_val = release_processor();
-		if (NULL == temp) {
-			printf("im proc 1 and i got some null going on here\n\r");
-		}
-		else {
-			printf("im proc 1 and i got mem at 0x%x\n\r", temp);
-		}
-		if ( i != 0 && i%5 == 0 ) {
-			uart0_put_string("\n\r");
-			ret_val = release_processor();
-#ifdef DEBUG_0
-			printf("proc1: ret_val=%d\n", ret_val);
-#endif /* DEBUG_0 */
-		}
-		uart0_put_char('A' + i%26);
-		i++;
-	}
-}
+// void proc1(void)
+// {
+// 	int i = 0;
+// 	int ret_val;
+// 	void* temp ;
+// 	while ( 1) {
+// 		temp = k_request_memory_block();
+// 		if (NULL == temp) {
+// 			printf("im proc 1 and i got some null going on here\n\r");
+// 		}
+// 		else {
+// 			printf("im proc 1 and i got mem at 0x%x\n\r", temp);
+// 		}
+// 		if ( i != 0 && i%5 == 0 ) {
+// 			uart0_put_string("\n\r");
+// 			ret_val = release_processor();
+// #ifdef DEBUG_0
+// 			printf("proc1: ret_val=%d\n", ret_val);
+// #endif /* DEBUG_0 */
+// 		}
+// 		uart0_put_char('A' + i%26);
+// 		i++;
+// 	}
+// }
 
-/**
- * @brief: a process that prints five numbers
- *         and then yields the cpu.
- */
-void proc2(void)
-{
-	int i = 0;
-	int ret_val = 20;
-	while ( 1) {
-		if ( i != 0 && i%5 == 0 ) {
-			uart0_put_string("\n\r");
-			ret_val = release_processor();
-#ifdef DEBUG_0
-			printf("proc2: ret_val=%d\n", ret_val);
-#endif /* DEBUG_0 */
-		}
-		uart0_put_char('0' + i%10);
-		i++;
-	}
-}
+// /**
+//  * @brief: a process that prints five numbers
+//  *         and then yields the cpu.
+//  */
+// void proc2(void)
+// {
+// 	int i = 0;
+// 	int ret_val = 20;
+// 	while ( 1) {
+// 		if ( i != 0 && i%5 == 0 ) {
+// 			uart0_put_string("\n\r");
+// 			ret_val = release_processor();
+// #ifdef DEBUG_0
+// 			printf("proc2: ret_val=%d\n", ret_val);
+// #endif /* DEBUG_0 */
+// 		}
+// 		uart0_put_char('0' + i%10);
+// 		i++;
+// 	}
+// }

@@ -111,7 +111,7 @@ void heap_init() {
 	#ifdef DEBUG_0
 		printf("k_mem_init: ram limit at 0x%x\n\r", gp_stack);
 	#endif
-	while( temp + MEM_BLK_SIZE < (mem_blk*)gp_stack){
+	while( (unsigned int)temp + MEM_BLK_SIZE < (unsigned int)p_end + 128 * 2/*(unsigned int)gp_stack*/){
 		temp->next_blk = (U32*)((unsigned int)temp + MEM_BLK_SIZE);
 		#ifdef DEBUG_0
 			//printf("k_mem_init: block at 0x%x\n\r", (void*)temp);
@@ -132,6 +132,7 @@ U32 *alloc_stack(U32 size_b)
 {
 	U32 *sp;
 	sp = gp_stack; /* gp_stack is always 8 bytes aligned */
+	printf("Making process stack between 0x%x", gp_stack);
 	
 	/* update gp_stack */
 	gp_stack = (U32 *)((U8 *)sp - size_b);
@@ -140,6 +141,7 @@ U32 *alloc_stack(U32 size_b)
 	if ((U32)gp_stack & 0x04) {
 		--gp_stack; 
 	}
+	printf(" and 0x%x\n\r", gp_stack);
 	return sp;
 }
 
@@ -149,14 +151,12 @@ void *k_request_memory_block(void) {
 #ifdef DEBUG_0 
 	printf("k_request_memory_block: entering...\n\r");
 #endif /* ! DEBUG_0 */
-	//gp_current_process->m_state = BLOCKED;
-	//k_release_processor();
-	while (NULL == p_heap_head) {
+	if (NULL == p_heap_head) {
 		printf("k_request_memory_block: no moar memory\n\r");
 		gp_current_process->m_state = BLOCKED;
 		k_release_processor();
-		printf("lol3\n\r");
 	}
+
 	p_heap_head = (mem_blk*) p_heap_head->next_blk;
 	return (void*) temp ;
 }
