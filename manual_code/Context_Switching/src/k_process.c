@@ -160,8 +160,9 @@ int process_switch(PCB *p_pcb_old)
 		} else {
 			gp_current_process = p_pcb_old; // revert back to the old proc on error
 			return RTX_ERR;
-		} 
+		}
 	}
+	printf("lol1\n\r");
 	return RTX_OK;
 }
 /**
@@ -183,7 +184,10 @@ int k_release_processor(void)
   if ( p_pcb_old == NULL ) {
 		p_pcb_old = gp_current_process;
 	}
+	
+	printf("lol0.5: %d\n\r", gp_current_process->m_pid);
 	process_switch(p_pcb_old);
+	printf("lol2: %d\n\r", gp_current_process->m_pid);
 	return RTX_OK;
 }
 
@@ -228,6 +232,9 @@ int k_set_process_priority (int process_id, int priority)
 					gp_priority_end[priority] = cur_pcb;
 				}
 				
+				if (priority > gp_current_process->m_priority && cur_pcb->m_state != BLOCKED) {
+					k_release_processor();
+				}
 				return RTX_OK;
 			}
 			prev_pcb = cur_pcb;

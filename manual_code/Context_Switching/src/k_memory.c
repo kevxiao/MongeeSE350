@@ -47,6 +47,7 @@ U32 *gp_stack; /* The last allocated stack low address. 8 bytes aligned */
 unsigned int MEM_BLK_SIZE = 128;
 
 extern PCB* gp_current_process;
+U8 * p_end;
 
 typedef struct mem_blk
 {
@@ -57,9 +58,8 @@ extern mem_blk* p_heap_head = 0;
 
 void memory_init(void)
 {
-	mem_blk* temp;
-	U8 *p_end = (U8 *)&Image$$RW_IRAM1$$ZI$$Limit;
 	int i;
+	p_end = (U8 *)&Image$$RW_IRAM1$$ZI$$Limit;
   
 	/* 4 bytes padding */
 	p_end += 4;
@@ -83,6 +83,26 @@ void memory_init(void)
 	if ((U32)gp_stack & 0x04) { /* 8 bytes alignment */
 		--gp_stack; 
 	}
+ /* #ifdef DEBUG_0
+		printf("memory_init: heap init starts at 0x%x\n\r", p_end);
+	#endif
+	p_heap_head = (mem_blk*)p_end;
+	temp = (mem_blk*)p_end;
+	#ifdef DEBUG_0
+		printf("k_mem_init: ram limit at 0x%x\n\r", gp_stack);
+	#endif
+	while( temp + MEM_BLK_SIZE < (mem_blk*)gp_stack){
+		temp->next_blk = (U32*)((unsigned int)temp + MEM_BLK_SIZE);
+		#ifdef DEBUG_0
+			//printf("k_mem_init: block at 0x%x\n\r", (void*)temp);
+		#endif
+		temp = (mem_blk*)((*temp).next_blk);
+	}
+	(*temp).next_blk = NULL;*/
+}
+
+void heap_init() {
+	mem_blk* temp;
   #ifdef DEBUG_0
 		printf("memory_init: heap init starts at 0x%x\n\r", p_end);
 	#endif
@@ -94,11 +114,10 @@ void memory_init(void)
 	while( temp + MEM_BLK_SIZE < (mem_blk*)gp_stack){
 		temp->next_blk = (U32*)((unsigned int)temp + MEM_BLK_SIZE);
 		#ifdef DEBUG_0
-			printf("k_mem_init: block at 0x%x\n\r", (void*)temp);
+			//printf("k_mem_init: block at 0x%x\n\r", (void*)temp);
 		#endif
 		temp = (mem_blk*)((*temp).next_blk);
 	}
-	(*temp).next_blk = NULL;
 }
 
 /**
@@ -130,8 +149,10 @@ void *k_request_memory_block(void) {
 	printf("k_request_memory_block: entering...\n\r");
 #endif /* ! DEBUG_0 */
 	while (NULL == p_heap_head) {
+		printf("k_request_memory_block: no moar memory\n\r");
 		gp_current_process->m_state = BLOCKED;
 		k_release_processor();
+		printf("lol3\n\r");
 	}
 	p_heap_head = (mem_blk*) p_heap_head->next_blk;
 	return (void*) temp ;
