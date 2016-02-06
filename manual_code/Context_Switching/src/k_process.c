@@ -232,7 +232,7 @@ int k_set_process_priority (int process_id, int priority)
 					gp_priority_end[priority] = cur_pcb;
 				}
 				
-				if (priority > gp_current_process->m_priority && cur_pcb->m_state != BLOCKED) {
+				if (priority < gp_current_process->m_priority && cur_pcb->m_state != BLOCKED) {
 					k_release_processor();
 				}
 				return RTX_OK;
