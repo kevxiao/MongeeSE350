@@ -23,6 +23,7 @@ PCB *scheduler(void);                  /* pick the pid of the next to run proces
 int k_release_processor(void);         /* kernel release_process function */
 int k_set_process_priority(int, int);
 int k_get_process_priority(int);
+int k_get_current_process_id();
 
 extern U32 *alloc_stack(U32 size_b);   /* allocate stack for a process */
 extern void __rte(void);               /* pop exception stack frame */

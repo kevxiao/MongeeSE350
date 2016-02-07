@@ -20,7 +20,7 @@ PROC_INIT g_test_procs[NUM_TEST_PROCS];
 int PID_P4 = 4;
 int PID_P5 = 5;
 void* used_mem_blocks[1000];
-int curr_index = -1;	
+int curr_index = 0;	
 
 void set_test_procs() {
 	int i;
@@ -30,8 +30,9 @@ void set_test_procs() {
 		g_test_procs[i].m_stack_size=0x100;
 	}
   
-	g_test_procs[0].mpf_start_pc = &proc1;
+	g_test_procs[0].mpf_start_pc = &proc6;
 	g_test_procs[1].mpf_start_pc = &proc2;
+	g_test_procs[2].mpf_start_pc = &proc7;
 }
 
 void nullproc(void)
@@ -41,14 +42,29 @@ void nullproc(void)
 	}
 }
 
-void process1(void){
+void testFunction(void){
+	uart0_put_string("G008_test: START\n\r");
+	uart0_put_string("G008_test: total x tests\n\r");
 	
+	uart0_put_string("G008_test: ");
+	uart0_put_char("x");
+	uart0_put_char("/");
+	uart0_put_char("N");
+	uart0_put_char(" tests OK\n\r");
+	
+	uart0_put_string("G008_test: ");
+	uart0_put_char("y");
+	uart0_put_char("/");
+	uart0_put_char("N");
+	uart0_put_char(" tests FAIL\n\r");
+	
+	uart0_put_string("G008_test: END\n\r");
 }
 
 void proc1(void) {
 	while(1) {
 		#ifdef DEBUG_0
-			printf("Requesting block of memory - this is proc1\n");
+			printf("Requesting block of memory - this is proc1\n\r");
 		#endif
 		request_memory_block();
 		release_processor();
@@ -71,22 +87,26 @@ void proc2(void) {
  * Used to test the function of the k_request_memory_block and k_release_memory_block.
  */
 void proc3(void) {
-	int i = 0;
- 	int ret_val;
  	void* p_mem_blk1 ;
  	void* p_mem_blk2 ;
  	void* p_mem_blk3 ;
  	while ( 1) {
- 		p_mem_blk1 = k_request_memory_block();
- 		uart0_put_string("Successfully obtained first memory at address: "+ p_mem_blk1 + "\n\r");
- 		p_mem_blk2 = k_request_memory_block();
- 		uart0_put_string("Successfully obtained second memory at address: "+ p_mem_blk2 + "\n\r");
- 		p_mem_blk3 = k_request_memory_block();
- 		uart0_put_string("Successfully obtained third memory at address: "+ p_mem_blk3 + "\n\r");
- 		k_release_memory_block(p_mem_blk1);
- 		k_release_memory_block(p_mem_blk2);
- 		k_release_memory_block(p_mem_blk3);
- 		ret_val = release_processor();
+ 		p_mem_blk1 = request_memory_block();
+ 		uart0_put_string("Successfully obtained first memory block at address: ");
+		uart0_put_char('0' + (unsigned int) p_mem_blk1);
+		uart0_put_string("\n\r");
+ 		p_mem_blk2 = request_memory_block();
+ 		uart0_put_string("Successfully obtained second memory block at address: ");
+		uart0_put_char('0' + (unsigned int) p_mem_blk2);
+		uart0_put_string("\n\r");
+ 		p_mem_blk3 = request_memory_block();
+ 		uart0_put_string("Successfully obtained third memory block at address: ");
+		uart0_put_char('0' + (unsigned int) p_mem_blk3);
+		uart0_put_string("\n\r");
+ 		release_memory_block(p_mem_blk1);
+ 		release_memory_block(p_mem_blk2);
+ 		release_memory_block(p_mem_blk3);
+ 		release_processor();
  	}
 }
 
@@ -99,7 +119,7 @@ void proc3(void) {
 void proc4(void)
 {
 	int i = 0;
-	set_process_priority(PID_P4, HIGH);
+	k_set_process_priority(k_get_current_process_id(), HIGH);
 	while ( 1) {
 		if ( i != 0 && i%26 == 0 ) {
 			uart0_put_string("\n\r");
@@ -116,19 +136,18 @@ void proc4(void)
  */
 void proc5(void)
 {
-	int i = 0;
 	int cur_priority = 0;
 	while ( 1) {
-		cur_priority = k_get_process_priority(PID_P5);
-		if(cur_priority != 0){
-			uart0_put_string("Changing this processes priority from");
+		cur_priority = k_get_process_priority(k_get_current_process_id());
+		if(cur_priority != HIGH){
+			uart0_put_string("Changing this processes priority from ");
 			uart0_put_char('0'+cur_priority);
 			uart0_put_string(" to 0\n\r");
-			set_process_priority(PID_P5, HIGH);
+			k_set_process_priority(k_get_current_process_id(), HIGH);
 			release_processor();
 		}else{
 			uart0_put_string("Changing this processes priority from 0 to 3\n\r");
-			set_process_priority(PID_P5, LOWEST);
+			k_set_process_priority(k_get_current_process_id(), LOWEST);
 			release_processor();
 		}
 	}
@@ -141,9 +160,10 @@ void proc5(void)
 void proc6(void)
 {
 	while (1) {
-		curr_index++;
 		used_mem_blocks[curr_index] = request_memory_block();
-		uart0_put_string("Obtained memory at address: "+ used_mem_blocks[curr_index] + "\n\r");
+		printf("Im proc6 and i got : 0x%x\r\n",  used_mem_blocks[curr_index]);
+		curr_index++;
+		//uart0_put_string("Obtained memory at address: ")+ used_mem_blocks[curr_index] + "\n\r");
 	}
 }
 
@@ -156,66 +176,16 @@ void proc7(void)
 	int i=0;
 	while(1){
 		if ( i != 0 && i%5 == 0 ) {
+			i = 0;
 			release_processor();
 		}
-		if(curr_index <0){
-			curr_index = -1;
+		if(curr_index <=0){
+			curr_index = 0;
 			release_processor();
 		}
-		k_release_memory_block(used_mem_blocks[curr_index]);
-		uart0_put_string("Released memory at address: "+ used_mem_blocks[curr_index] + "\n\r");
+		k_release_memory_block(used_mem_blocks[curr_index - 1]);
+//		uart0_put_string("Released memory at address: "+ used_mem_blocks[curr_index] + "\n\r");
 		curr_index--;
 		i++;
 	}
 }
-	
-
-/**
- * @brief: a process that prints five uppercase letters
- *         and then yields the cpu.
- */
-// void proc1(void)
-// {
-// 	int i = 0;
-// 	int ret_val;
-// 	void* temp ;
-// 	while ( 1) {
-// 		temp = k_request_memory_block();
-// 		if (NULL == temp) {
-// 			printf("im proc 1 and i got some null going on here\n\r");
-// 		}
-// 		else {
-// 			printf("im proc 1 and i got mem at 0x%x\n\r", temp);
-// 		}
-// 		if ( i != 0 && i%5 == 0 ) {
-// 			uart0_put_string("\n\r");
-// 			ret_val = release_processor();
-// #ifdef DEBUG_0
-// 			printf("proc1: ret_val=%d\n", ret_val);
-// #endif /* DEBUG_0 */
-// 		}
-// 		uart0_put_char('A' + i%26);
-// 		i++;
-// 	}
-// }
-
-// /**
-//  * @brief: a process that prints five numbers
-//  *         and then yields the cpu.
-//  */
-// void proc2(void)
-// {
-// 	int i = 0;
-// 	int ret_val = 20;
-// 	while ( 1) {
-// 		if ( i != 0 && i%5 == 0 ) {
-// 			uart0_put_string("\n\r");
-// 			ret_val = release_processor();
-// #ifdef DEBUG_0
-// 			printf("proc2: ret_val=%d\n", ret_val);
-// #endif /* DEBUG_0 */
-// 		}
-// 		uart0_put_char('0' + i%10);
-// 		i++;
-// 	}
-// }

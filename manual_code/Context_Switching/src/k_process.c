@@ -204,7 +204,7 @@ int k_set_process_priority (int process_id, int priority)
 	PCB* cur_pcb = NULL;
 	PCB* prev_pcb = NULL;
 	if((process_id == 0 && priority != 4)|| (process_id != 0 && priority == 4)) {
-		return -1;
+		return RTX_ERR;
 	}
 	for ( i = 0; i < NUM_PRIORITIES; ++i) {
 		cur_pcb = gp_priority_begin[i];
@@ -212,11 +212,14 @@ int k_set_process_priority (int process_id, int priority)
 		while (cur_pcb != NULL) {
 			if (cur_pcb->m_pid == process_id) {
 				if(cur_pcb->m_priority == priority) {
-					return 0;
+					return RTX_OK;
 				}
 				cur_pcb->m_priority = priority;
 				if(prev_pcb != NULL){
 					prev_pcb->mp_next = cur_pcb->mp_next;
+					if (gp_priority_end[i] == cur_pcb) {
+						gp_priority_end[i] = prev_pcb;
+					}
 				}else{
 					gp_priority_begin[i] = cur_pcb->mp_next;
 					if(gp_priority_begin[i] == NULL){
@@ -229,8 +232,8 @@ int k_set_process_priority (int process_id, int priority)
 					gp_priority_end[priority]->mp_next = cur_pcb;
 				}else{
 					gp_priority_begin[priority] = cur_pcb;
-					gp_priority_end[priority] = cur_pcb;
 				}
+				gp_priority_end[priority] = cur_pcb;
 				
 				if (priority < gp_current_process->m_priority && cur_pcb->m_state != BLOCKED) {
 					k_release_processor();
@@ -263,4 +266,11 @@ int k_get_process_priority (int process_id)
 		}
 	}
 	return RTX_ERR;
+}
+
+int k_get_current_process_id(){
+	if(gp_current_process == NULL){
+		return -1;
+	}
+	return gp_current_process->m_pid;
 }
