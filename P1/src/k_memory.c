@@ -55,7 +55,6 @@ typedef struct mem_blk
 } mem_blk;
 
 extern mem_blk* p_heap_head = NULL;
-mem_blk** blocks_in_use;
 int numBlocks = 0;
 
 void memory_init(void)
@@ -92,7 +91,6 @@ void memory_init(void)
 
 void heap_init(void) {
 	mem_blk* temp;
-	int i=0;
   #ifdef DEBUG_0
 		printf("memory_init: heap init starts at 0x%x\n\r", p_end);
 	#endif
@@ -107,7 +105,6 @@ void heap_init(void) {
 			printf("k_mem_init: block at 0x%x\n\r", (void*)temp);
 		#endif
 		temp = (mem_blk*)((*temp).next_blk);
-		blocks_in_use[i++] = NULL;
 		numBlocks++;
 	}
 	(*temp).next_blk = NULL;
