@@ -26,20 +26,13 @@ void set_test_procs() {
 	int i;
 	for( i = 0; i < NUM_TEST_PROCS; i++ ) {
 		g_test_procs[i].m_pid=(U32)(i+1);
-		g_test_procs[i].m_priority=LOWEST;
+		g_test_procs[i].m_priority=i % 4;
 		g_test_procs[i].m_stack_size=0x100;
 	}
   
 	g_test_procs[0].mpf_start_pc = &proc6;
 	g_test_procs[1].mpf_start_pc = &proc2;
 	g_test_procs[2].mpf_start_pc = &proc7;
-}
-
-void nullproc(void)
-{
-	while (1) {
-		k_release_processor();
-	}
 }
 
 void testFunction(void){

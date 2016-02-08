@@ -22,6 +22,9 @@
 #include "printf.h"
 #endif /* DEBUG_0 */
 
+#define NULL_PID 0
+#define NULL_PRIORITY 4
+
 /* ----- Global Variables ----- */
 PCB **gp_pcbs;                  /* array of pointers to pcbs */
 PCB *gp_current_process = NULL; /* always point to the current RUN process */
@@ -34,7 +37,17 @@ PCB* gp_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 PCB* gp_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 
 /**
- * @biref: initialize all processes in the system
+ * @brief null process
+ */
+void nullproc(void)
+{
+	while (1) {
+		k_release_processor();
+	}
+}
+
+/**
+ * @brief: initialize all processes in the system
  * NOTE: We assume there are only two user processes in the system in this example.
  */
 void process_init() 
@@ -42,9 +55,16 @@ void process_init()
 	int i;
 	U32 *sp;
   
-        /* fill out the initialization table */
+  /* fill out the initialization table */
 	set_test_procs();
-	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
+	
+	// first set up the null process
+	g_proc_table[i].m_pid = NULL_PID;
+	g_proc_table[i].m_stack_size = USR_SZ_STACK;
+	g_proc_table[i].mpf_start_pc = &nullproc;
+	g_proc_table[i].m_priority = NULL_PRIORITY;
+	
+	for ( i = 1; i < NUM_TEST_PROCS; i++ ) {
 		g_proc_table[i].m_pid = g_test_procs[i].m_pid;
 		g_proc_table[i].m_stack_size = g_test_procs[i].m_stack_size;
 		g_proc_table[i].mpf_start_pc = g_test_procs[i].mpf_start_pc;
