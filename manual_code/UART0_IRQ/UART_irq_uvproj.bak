@@ -416,6 +416,11 @@
               <FileType>1</FileType>
               <FilePath>.\src\system_LPC17xx.c</FilePath>
             </File>
+            <File>
+              <FileName>printf.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\printf.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -839,6 +844,11 @@
               <FileName>system_LPC17xx.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\system_LPC17xx.c</FilePath>
+            </File>
+            <File>
+              <FileName>printf.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\printf.c</FilePath>
             </File>
           </Files>
         </Group>

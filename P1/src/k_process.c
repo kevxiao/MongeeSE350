@@ -3,7 +3,7 @@
  * @brief:  process management C file
  * @author: Yiqing Huang
  * @author: Thomas Reidemeister
- * @date:   2014/01/17
+ * @date:   2014/02/28
  * NOTE: The example code shows one way of implementing context switching.
  *       The code only has minimal sanity check. There is no stack overflow check.
  *       The implementation assumes only two simple user processes and NO HARDWARE INTERRUPTS. 
@@ -23,8 +23,12 @@
 #endif /* DEBUG_0 */
 
 /* ----- Global Variables ----- */
-PCB **gp_pcbs;                  /* array of pointers to pcbs */
+PCB **gp_pcbs;                  /* array of pcbs */
 PCB *gp_current_process = NULL; /* always point to the current RUN process */
+
+U32 g_switch_flag = 0;          /* whether to continue to run the process before the UART receive interrupt */
+                                /* 1 means to switch to another process, 0 means to continue the current process */
+				/* this value will be set by UART handler */
 
 /* process initialization table */
 PROC_INIT g_proc_table[NUM_TEST_PROCS + 1];

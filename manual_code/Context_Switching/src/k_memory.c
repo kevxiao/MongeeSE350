@@ -68,9 +68,9 @@ void memory_init(void)
 
 	/* allocate memory for pcb pointers   */
 	gp_pcbs = (PCB **)p_end;
-	p_end += NUM_TEST_PROCS * sizeof(PCB *);
+	p_end += (NUM_TEST_PROCS + 1) * sizeof(PCB *);
   
-	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
+	for ( i = 0; i < NUM_TEST_PROCS + 1; i++ ) {
 		gp_pcbs[i] = (PCB *)p_end;
 		p_end += sizeof(PCB); 
 	}
@@ -151,7 +151,7 @@ U32 *alloc_stack(U32 size_b)
 }
 
 void *k_request_memory_block(void) {
-	int i = 0;
+	//int i = 0;
 	mem_blk* temp = p_heap_head;
 #ifdef DEBUG_0 
 	printf("k_request_memory_block: entering...\n\r");
@@ -176,7 +176,8 @@ void *k_request_memory_block(void) {
 int k_release_memory_block(void *p_mem_blk) {
 	mem_blk* temp = (mem_blk*) p_mem_blk;
 	int i;
-	int found = 0;
+	int will_release = 0;
+	//int found = 0;
 	PCB* cur_pcb = NULL;
 // 	if (p_mem_blk == NULL){
 // 		return RTX_ERR;
@@ -200,15 +201,17 @@ int k_release_memory_block(void *p_mem_blk) {
 		cur_pcb = gp_priority_begin[i];
 		while(cur_pcb != NULL){
 			if(cur_pcb->m_state == BLOCKED) {
+				if(i <= gp_current_process->m_priority){
+					will_release++;
+				}
 				cur_pcb->m_state = RDY;
 				//return RTX_OK;
 			}
 			cur_pcb = cur_pcb->mp_next;
 		}
 	}
+	if (will_release > 0){
+		k_release_processor();
+	}
 	return RTX_OK;
-}
-
-void dumbFunc(void) {
-	gp_current_process->m_state = BLOCKED;
 }
