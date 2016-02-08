@@ -1,8 +1,9 @@
 *
-!*.c
-!*.h
+!.c
+!.h
 !.gitignore
 !.uvproj
+!.uvopt
 !**/P1/
 !**/P2/
 !**/P3/

@@ -165,7 +165,7 @@ void proc1(void) {
 	while(1) {
 		proc1Prio = get_process_priority(1);
 		#ifdef DEBUG_0
-			printf("This is process 1\n");
+			printf("This is process 1\n\r");
 		#endif
 		proc1_count++;
 		if (proc1_count > 30) {
