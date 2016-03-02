@@ -17,6 +17,8 @@
 #include <system_LPC17xx.h>
 #include "uart_polling.h"
 #include "k_process.h"
+#include "uart.h"
+
 
 #ifdef DEBUG_0
 #include "printf.h"
@@ -33,8 +35,8 @@ U32 g_switch_flag = 0;         /* whether to continue to run the process before 
 				/* this value will be set by UART handler */
 
 /* process initialization table */
-PROC_INIT g_proc_table[NUM_TEST_PROCS + 1];
-extern PROC_INIT g_test_procs[NUM_TEST_PROCS + 1];
+PROC_INIT g_proc_table[NUM_TEST_PROCS + 3];
+extern PROC_INIT g_test_procs[NUM_TEST_PROCS + 3];
 
 //DELAYED_MSGS g_delayed_msgs;
 
@@ -53,7 +55,42 @@ void nullproc(void)
 	}
 }
 
-//void kcd
+void kcdproc(void) {
+	char* currentCommand[50]; //50 is the max command length
+	char lastChar;
+	int i = 0;
+	int newEntered = 0;
+	while(1) {
+		//output '%'
+		//GARBAGE lastChar = receive();
+		while(lastChar != '\n') {//right here we might need to replace it with 0x0D
+			currentCommand[i++] = lastChar;
+			//receive new character in lastChar
+			//while (!newEntered && /*!flag*/) {
+			//	if (/*flag*/) {
+				//	newEntered = 1;
+					
+//				}
+	//		}
+		}
+		//execute currenCommand
+		//one of these command X will release_processor()
+	}
+}
+
+void crtproc(void){
+	MSG_BUF *message;
+	int sender_pid;
+	uart_irq_init(0);
+	
+	while(1){
+		message = k_receive_message(&sender_pid);
+		write_to_CRT(message->mtext);
+		k_release_memory_block(message);
+		k_release_processor();
+	}
+	
+}
 
 /**
  * @brief: initialize all processes in the system
@@ -66,10 +103,18 @@ void process_init()
   
         /* fill out the initialization table */
 	set_test_procs();
-	g_proc_table[NUM_TEST_PROCS].m_pid = 0;
+	g_proc_table[NUM_TEST_PROCS].m_pid = PID_NULL;
 	g_proc_table[NUM_TEST_PROCS].m_stack_size = 0x100;
 	g_proc_table[NUM_TEST_PROCS].mpf_start_pc = &nullproc;
 	g_proc_table[NUM_TEST_PROCS].m_priority = 4;
+	g_proc_table[NUM_TEST_PROCS + 1].m_pid = PID_KCD;
+	g_proc_table[NUM_TEST_PROCS + 1].m_stack_size = 0x100;
+	g_proc_table[NUM_TEST_PROCS + 1].mpf_start_pc = &kcdproc;
+	g_proc_table[NUM_TEST_PROCS + 1].m_priority = HIGH;
+	g_proc_table[NUM_TEST_PROCS + 2].m_pid = PID_CRT;
+	g_proc_table[NUM_TEST_PROCS + 2].m_stack_size = 0x100;
+	g_proc_table[NUM_TEST_PROCS + 2].mpf_start_pc = &crtproc;
+	g_proc_table[NUM_TEST_PROCS + 2].m_priority = HIGH;
 	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
 		g_proc_table[i].m_pid = g_test_procs[i].m_pid;
 		g_proc_table[i].m_stack_size = g_test_procs[i].m_stack_size;
@@ -78,7 +123,7 @@ void process_init()
 	}
   
 	/* initilize exception stack frame (i.e. initial context) for each process */
-	for ( i = 0; i < NUM_TEST_PROCS + 1; i++ ) {
+	for ( i = 0; i < NUM_TEST_PROCS + 3; i++ ) {
 		int j;
 		(gp_pcbs[i])->m_pid = (g_proc_table[i]).m_pid;
 		(gp_pcbs[i])->m_priority = (g_proc_table[i]).m_priority;
@@ -233,7 +278,7 @@ int k_set_process_priority (int process_id, int priority)
 	int i = 0;
 	PCB* cur_pcb = NULL;
 	PCB* prev_pcb = NULL;
-	if((process_id == 0 && priority != 4)|| (process_id != 0 && priority == 4)) {
+	if((process_id == PID_NULL && priority != 4)|| (process_id != PID_NULL && priority == 4)) {
 		return RTX_ERR;
 	}
 	for ( i = 0; i < NUM_PRIORITIES; ++i) {
@@ -350,7 +395,7 @@ int k_send_message(int process_id, void *message_envelope) {
 	return RTX_ERR;
 }
 
-void* k_receive_message() {
+void* k_receive_message(int *sender_id) {
 	void* temp;
 	//atomic(on) ???
 	while (gp_current_process->mp_first_msg == NULL) {
@@ -358,6 +403,7 @@ void* k_receive_message() {
 		k_release_processor();
 	}
 	temp = (void*) gp_current_process->mp_first_msg;
+	*sender_id = gp_current_process->mp_first_msg->m_send_pid;
 	gp_current_process->mp_first_msg = gp_current_process->mp_first_msg->mp_next;
 	if (NULL == gp_current_process->mp_first_msg) {
 		gp_current_process->mp_last_msg = NULL;
@@ -373,9 +419,9 @@ int k_delayed_send(int process_id, void *message_envelope, int delay) {
 	MSG_BUF* prev = NULL;
 	MSG_BUF* new_msg = (MSG_BUF*) message_envelope;
 	
-	new_msg->send_time = sendTime;
+	new_msg->m_send_time = sendTime;
 	
-	while(cur != NULL && cur->send_time < sendTime ){
+	while(cur != NULL && cur->m_send_time < sendTime ){
 		prev = cur;
 		cur = cur->mp_next;
 	}

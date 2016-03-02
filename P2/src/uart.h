@@ -59,6 +59,12 @@
 #define uart1_irq_init() uart_irq_init(1)       
      
 /* initialize the n_uart to use interrupt */
-int uart_irq_init(int n_uart);		
+int uart_irq_init(int n_uart);	
+
+void write_to_CRT(char*);
+
+extern int k_release_processor(void);
 
 #endif /* ! UART_IRQ_H_ */
+
+

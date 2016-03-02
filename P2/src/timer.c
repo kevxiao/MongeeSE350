@@ -121,7 +121,7 @@ void c_TIMER0_IRQHandler(void)
 	g_timer_count++ ;
 	
 	//HERE!!!
-	while (gp_delayed_msgs != NULL && gp_delayed_msgs->send_time <= g_timer_count) {
+	while (gp_delayed_msgs != NULL && gp_delayed_msgs->m_send_time <= g_timer_count) {
 		temp = gp_delayed_msgs;
 		gp_delayed_msgs = gp_delayed_msgs->mp_next;
 		k_send_message(gp_delayed_msgs->m_recv_pid, (void*) temp);

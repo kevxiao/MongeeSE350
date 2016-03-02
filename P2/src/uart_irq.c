@@ -18,6 +18,7 @@ uint8_t *gp_buffer = g_buffer;
 uint8_t g_send_char = 0;
 uint8_t g_char_in;
 uint8_t g_char_out;
+volatile int still_writing = 1;
 
 extern uint32_t g_switch_flag;
 
@@ -29,9 +30,11 @@ extern int k_release_processor(void);
  * of LPC17xx_UM
  */
 int uart_irq_init(int n_uart) {
-
+	
+	
+	
 	LPC_UART_TypeDef *pUart;
-
+	
 	if ( n_uart ==0 ) {
 		/*
 		Steps 1 & 2: system control configuration.
@@ -231,6 +234,7 @@ void c_UART0_IRQHandler(void)
 			pUart->THR = '\0';
 			g_send_char = 0;
 			gp_buffer = g_buffer;		
+			still_writing = 0;//has finshed writing string to output
 		}
 	      
 	} else {  /* not implemented yet */
@@ -240,3 +244,17 @@ void c_UART0_IRQHandler(void)
 		return;
 	}	
 }
+
+void write_to_CRT(char* text){
+	
+	LPC_UART_TypeDef *pUart = (LPC_UART_TypeDef *)LPC_UART0;
+	
+	gp_buffer = (uint8_t *)text;	
+	pUart->IER = IER_THRE | IER_RLS | IER_RBR; // set these bits to 1
+	
+	while(still_writing){//continue releasing processor until the text is finished outputing
+		k_release_processor();
+	}
+	
+}
+
