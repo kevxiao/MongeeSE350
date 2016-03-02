@@ -13,11 +13,14 @@
 #endif
 
 
-uint8_t g_buffer[]= "You Typed a Q\n\r";
+uint8_t g_buffer[];
 uint8_t *gp_buffer = g_buffer;
 uint8_t g_send_char = 0;
 uint8_t g_char_in;
 uint8_t g_char_out;
+
+MSG_BUF* gp_cur_msg_buf = NULL;
+int g_entering_kc = 0;
 
 extern uint32_t g_switch_flag;
 
@@ -202,12 +205,30 @@ void c_UART0_IRQHandler(void)
 		g_buffer[12] = g_char_in; // nasty hack
 		g_send_char = 1;
 		
-		/* setting the g_switch_flag */
-		if ( g_char_in == 'S' ) {
-			g_switch_flag = 1; 
-		} else {
-			g_switch_flag = 0;
+		if (g_entering_kc) {
+			//add to msg_buf
+			//make sure you don't overflow the message buffer, could be like 100
+			g_cur_msg_buf->mtext[g_entering_kc] = g_char_in;
+			if ('\n' == g_char_in || '\r' == g_char_in) {
+				g_cur_msg_buf->mtext[g_entering_kc] = g_char_in;
+				k_send_msg(PID_KCD, (void*) g_cur_msg_buf);
+				g_entering_kc = 0;
+			}
 		}
+		else if ('%' == g_char_in)) {
+			//make msg_buf
+			g_cur_msg_buf = (MSG_BUF*) k_request_memory_block();
+			//g_cur_msg_buf->mtype = 
+			g_cur_msg_buf->mtext[g_entering_kc] = g_char_in;
+			g_entering_kc++;
+		}
+		
+		/* setting the g_switch_flag */
+// 		if ( g_char_in == 'S' ) {
+// 			g_switch_flag = 1; 
+// 		} else {
+// 			g_switch_flag = 0;
+// 		}
 	} else if (IIR_IntId & IIR_THRE) {
 	/* THRE Interrupt, transmit holding register becomes empty */
 
