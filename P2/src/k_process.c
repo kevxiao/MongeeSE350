@@ -53,6 +53,8 @@ void nullproc(void)
 	}
 }
 
+//void kcd
+
 /**
  * @brief: initialize all processes in the system
  * NOTE: We assume there are only two user processes in the system in this example.
