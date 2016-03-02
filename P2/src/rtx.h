@@ -53,6 +53,12 @@ typedef struct proc_init
 /* message buffer */
 typedef struct msgbuf
 {
+#ifdef K_MSG_ENV
+	void *mp_next;		/* ptr to next message received*/
+	int m_send_pid;		/* sender pid */
+	int m_recv_pid;		/* receiver pid */
+	int m_kdata[5];		/* extra 20B kernel data place holder */
+#endif
 	int mtype;              /* user defined message type */
 	char mtext[1];          /* body of the message */
 } MSG_BUF;

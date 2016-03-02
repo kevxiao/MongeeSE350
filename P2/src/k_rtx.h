@@ -30,6 +30,20 @@ typedef unsigned int U32;
 /* process states, note we only assume three states in this example */
 typedef enum {NEW = 0, RDY, RUN, BLOCKED, BLOCKED_ON_RECEIVE} PROC_STATE_E;  
 
+/* message buffer */
+typedef struct msgbuf
+{
+//#ifdef K_MSG_ENV
+	void *mp_next;		/* ptr to next message received*/
+	int m_send_pid;		/* sender pid */
+	int m_recv_pid;		/* receiver pid */
+	U32 send_time; 
+	int m_kdata[5];		/* extra 20B kernel data place holder */
+//#endif
+	int mtype;              /* user defined message type */
+	char mtext[1];          /* body of the message */
+} MSG_BUF;
+
 /*
   PCB data structure definition.
   You may want to add your own member variables
@@ -42,15 +56,9 @@ typedef struct pcb
 	U32 m_pid;		/* process id */
 	U32 m_priority; /* process priority */
 	PROC_STATE_E m_state;   /* state of the process */     \
-	MSG_NODE* mp_first_msg;
-	MSG_NODE* mp_last_msg;
+	MSG_BUF* mp_first_msg;
+	MSG_BUF* mp_last_msg;
 } PCB;
-
-typedef struct msg_node
-{
-	struct msg_node *next;
-	void *msg;
-} MSG_NODE;
 
 /* initialization table item */
 typedef struct proc_init
@@ -60,5 +68,10 @@ typedef struct proc_init
 	int m_stack_size;       /* size of stack in words */
 	void (*mpf_start_pc) ();/* entry point of the process */    
 } PROC_INIT;
+
+//Thing for queue
+typedef struct delayed_msgs {
+	MSG_BUF* mp_first_msg;
+} DELAYED_MSGS;
 
 #endif // ! K_RTX_H_

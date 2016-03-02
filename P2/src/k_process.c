@@ -26,7 +26,9 @@
 PCB **gp_pcbs;                  /* array of pcbs */
 PCB *gp_current_process = NULL; /* always point to the current RUN process */
 
-U32 g_switch_flag = 0;          /* whether to continue to run the process before the UART receive interrupt */
+MSG_BUF * gp_delayed_msgs = NULL;
+
+U32 g_switch_flag = 0;         /* whether to continue to run the process before the UART receive interrupt */
                                 /* 1 means to switch to another process, 0 means to continue the current process */
 				/* this value will be set by UART handler */
 
@@ -34,8 +36,12 @@ U32 g_switch_flag = 0;          /* whether to continue to run the process before
 PROC_INIT g_proc_table[NUM_TEST_PROCS + 1];
 extern PROC_INIT g_test_procs[NUM_TEST_PROCS + 1];
 
+//DELAYED_MSGS g_delayed_msgs;
+
 PCB* gp_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 PCB* gp_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
+
+extern uint32_t g_timer_count;
 
 /**
  * @brief: the null process
@@ -67,8 +73,6 @@ void process_init()
 		g_proc_table[i].m_stack_size = g_test_procs[i].m_stack_size;
 		g_proc_table[i].mpf_start_pc = g_test_procs[i].mpf_start_pc;
 		g_proc_table[i].m_priority = g_test_procs[i].m_priority;
-		g_proc_table[i].mp_first_msg = NULL;
-		g_proc_table[i].mp_last_msg = NULL;
 	}
   
 	/* initilize exception stack frame (i.e. initial context) for each process */
@@ -77,6 +81,8 @@ void process_init()
 		(gp_pcbs[i])->m_pid = (g_proc_table[i]).m_pid;
 		(gp_pcbs[i])->m_priority = (g_proc_table[i]).m_priority;
 		(gp_pcbs[i])->m_state = NEW;
+		(gp_pcbs[i])->mp_first_msg = NULL;
+		(gp_pcbs[i])->mp_last_msg = NULL;
 		
 		sp = alloc_stack((g_proc_table[i]).m_stack_size);
 		*(--sp)  = INITIAL_xPSR;      // user process initial xPSR  
@@ -297,12 +303,6 @@ int k_get_process_priority (int process_id)
 	return gp_current_process->m_pid;
 }*/
 
-
-struct msgbuf {
-	int mtype; /* user defined message type */
-	char mtext[1]; /* body of the message */
-};
-
 PCB* get_PCB (int process_id)
 {
 	int i = 0;
@@ -316,48 +316,76 @@ PCB* get_PCB (int process_id)
 			cur_pcb = cur_pcb->mp_next;
 		}
 	}
-	return null;
+	return NULL;
 }
 
 int k_send_message(int process_id, void *message_envelope) {
 	//atomic(on) ???
 	PCB *receiving = NULL;
+	MSG_BUF * new_node = (MSG_BUF*) message_envelope;
+	int i;
 	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
-		if (g_proc_table[i].m_pid == process_id) {
-			receiving = g_proc_table[i];
+		if ((gp_pcbs[i])->m_pid == process_id) {
+			receiving = gp_pcbs[i];
 		}
 	}
 	if (receiving != NULL) {
-		MSG_NODE *new_node;
-		new_node->next=NULL;
-		new_node->msg = message_envelope;
-		if (NULL == receiving.mp_first_msg) {
+		new_node->mp_next=NULL;
+		if (NULL == receiving->mp_first_msg) {
 			receiving->mp_first_msg = new_node;
 			receiving->mp_last_msg = new_node;
 		}else{
-			receiving->mp_last->next = new_node;
-			receiving->mp_last = new_node;
+			receiving->mp_last_msg->mp_next = new_node;
+			receiving->mp_last_msg = new_node;
 		}
 		if (BLOCKED_ON_RECEIVE == receiving->m_state) {
 			receiving->m_state = RDY;
 			//PUT INTO receiving process queue???
 		}
+		return RTX_OK;
 	}
 	//atomic(off) ???
+	return RTX_ERR;
 }
 
-void* receive_message() {
+void* k_receive_message() {
 	void* temp;
 	//atomic(on) ???
 	while (gp_current_process->mp_first_msg == NULL) {
 		gp_current_process->m_state = BLOCKED_ON_RECEIVE;
 		k_release_processor();
 	}
-	temp = gp_current_process->mp_first_msg.msg;
-	gp_current_process->mp_first_msg = gp_current_proces->mp_first_msg->next;
+	temp = (void*) gp_current_process->mp_first_msg;
+	gp_current_process->mp_first_msg = gp_current_process->mp_first_msg->mp_next;
 	if (NULL == gp_current_process->mp_first_msg) {
 		gp_current_process->mp_last_msg = NULL;
 	}
 	//atomic(off) ???
-	return temp; //SHOULD ACTUALLY BE THE MESSAGE THAT IS DEQUEUED
+	return temp;
+}
+
+int k_delayed_send(int process_id, void *message_envelope, int delay) {
+	int sendTime = delay + g_timer_count;
+	
+	MSG_BUF* cur = gp_delayed_msgs;
+	MSG_BUF* prev = NULL;
+	MSG_BUF* new_msg = (MSG_BUF*) message_envelope;
+	
+	new_msg->send_time = sendTime;
+	
+	while(cur != NULL && cur->send_time < sendTime ){
+		prev = cur;
+		cur = cur->mp_next;
+	}
+	
+	if(prev == NULL){
+		new_msg->mp_next = gp_delayed_msgs;
+		gp_delayed_msgs = new_msg;
+	}
+	else{
+		prev->mp_next = new_msg;
+		new_msg->mp_next = cur;
+	}
+	
+	return RTX_OK;
 }
