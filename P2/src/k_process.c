@@ -44,6 +44,8 @@ PCB* gp_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 PCB* gp_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 
 extern uint32_t g_timer_count;
+extern int g_clock_time;
+extern int g_display_clock;
 
 /**
  * @brief: the null process
@@ -52,29 +54,6 @@ void nullproc(void)
 {
 	while (1) {
 		k_release_processor();
-	}
-}
-
-void kcdproc(void) {
-	char* currentCommand[50]; //50 is the max command length
-	char lastChar;
-	int i = 0;
-	int newEntered = 0;
-	while(1) {
-		//output '%'
-		//GARBAGE lastChar = receive();
-		while(lastChar != '\n') {//right here we might need to replace it with 0x0D
-			currentCommand[i++] = lastChar;
-			//receive new character in lastChar
-			//while (!newEntered && /*!flag*/) {
-			//	if (/*flag*/) {
-				//	newEntered = 1;
-					
-//				}
-	//		}
-		}
-		//execute currenCommand
-		//one of these command X will release_processor()
 	}
 }
 
@@ -89,7 +68,58 @@ void crtproc(void){
 		k_release_memory_block(message);
 		k_release_processor();
 	}
-	
+}
+
+void kcdproc(void) {
+	MSG_BUF* command_msg;
+	//MSG_BUF* string_msg;
+	int sender_id;
+	int numHours;
+	int numMinutes;
+	int numSeconds;
+	char ASCII0 = '0';
+	char* command_text;
+	while (1) {
+		command_msg = (MSG_BUF*) k_receive_message(&sender_id);
+		//execute command
+		command_text = command_msg->mtext;
+		//check if valid command
+		if ('%' == command_text[0]) {
+			if ('W' == command_text[1] && 'R' == command_text[2]) {
+				g_clock_time = 0;
+				g_display_clock = 1;
+			}
+			else if ('W' == command_text[1] && 'S' == command_text[2] && ' ' == command_text[3]) {
+				if (':' == command_text[6] && ':' == command_text[9]) {
+					numHours = (int)(command_text[4] - ASCII0) * 10 + (int)(command_text[5] - ASCII0) ;
+					numMinutes = (int)(command_text[7] - ASCII0) * 10 + (int)(command_text[8] - ASCII0);
+					numSeconds = (int)(command_text[10] - ASCII0) * 10 + (int)(command_text[11] - ASCII0);
+					
+					if ( (int)(command_text[4] - ASCII0) < 0 || (int)(command_text[4] - ASCII0) > 9 || (int)(command_text[5] - ASCII0) < 0 || (int)(command_text[5] - ASCII0) > 9
+						|| (int)(command_text[7] - ASCII0) < 0 || (int)(command_text[7] - ASCII0) > 9 || (int)(command_text[8] - ASCII0) < 0 || (int)(command_text[8] - ASCII0) > 9
+					  || (int)(command_text[10] - ASCII0) < 0 || (int)(command_text[10] - ASCII0) > 9 || (int)(command_text[11] - ASCII0) < 0 || (int)(command_text[11] - ASCII0) > 9
+						|| numHours > 23 || numMinutes > 59 || numSeconds > 59) {
+							//Invalid time format error
+						}
+						else {
+							g_clock_time = numSeconds+60*(numMinutes+60*numHours);
+							g_display_clock = 1;
+						}
+							
+				}
+				else {
+					//argument syntax error
+				}
+			}
+			else if ('W' == command_text[1] && 'T' == command_text[2]) {
+				g_display_clock = 0;
+			}
+			else {
+				//invalid command error
+			}
+		}
+		k_release_memory_block(command_msg);
+	}
 }
 
 /**

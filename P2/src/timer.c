@@ -8,13 +8,18 @@
 
 #include <LPC17xx.h>
 #include "timer.h"
-#include "k_process.h"
+#include "rtx.h"
 
 #define BIT(X) (1<<X)
 
 volatile uint32_t g_timer_count = 0; // increment every 1 ms
 
 extern MSG_BUF* gp_delayed_msgs;//DELAYED_MSG_QUEUE g_delayed_msg_queue;
+
+int g_clock_time = 0;
+int g_display_clock = 0;
+
+const int SECONDS_IN_DAY = 86400;
 
 /**
  * @brief: initialize timer. Only timer 0 is supported
@@ -115,12 +120,29 @@ __asm void TIMER0_IRQHandler(void)
 void c_TIMER0_IRQHandler(void)
 {
 	MSG_BUF* temp;
+	MSG_BUF* time_msg;
 	/* ack inttrupt, see section  21.6.1 on pg 493 of LPC17XX_UM */
 	LPC_TIM0->IR = BIT(0);  
 	
 	g_timer_count++ ;
 	
 	//HERE!!!
+	g_clock_time = (g_clock_time + 1) % SECONDS_IN_DAY;
+	if (g_display_clock) {
+		time_msg = (MSG_BUF*) k_request_memory_block();
+		//time_msg->mytype =
+		time_msg->mtext[0] = (char)(g_clock_time/36000) + '0';
+		time_msg->mtext[1] = (char)((g_clock_time/3600) % 10) + '0';
+		time_msg->mtext[2] = ':';
+		time_msg->mtext[3] = (char) (((g_clock_time/60)%60)/10) + '0';
+		time_msg->mtext[4] = (char) (((g_clock_time/60)%60)%10) + '0';
+		time_msg->mtext[5] = ':';
+		time_msg->mtext[6] = (char) ((g_clock_time%60)/10) + '0';
+		time_msg->mtext[7] = (char) ((g_clock_time%60)/10) + '0';
+		time_msg->mtext[8] = '\0';
+		//crt_write(time_msg)
+	}
+	
 	while (gp_delayed_msgs != NULL && gp_delayed_msgs->m_send_time <= g_timer_count) {
 		temp = gp_delayed_msgs;
 		gp_delayed_msgs = gp_delayed_msgs->mp_next;
