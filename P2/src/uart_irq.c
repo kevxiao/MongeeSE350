@@ -226,6 +226,18 @@ void c_UART0_IRQHandler(void)
 			g_entering_kc++;
 		}
 		
+		#ifdef _DEBUG_HOTKEYS
+		if ('1' == g_char_in) {
+			queue_debug_statement(RDY);
+		}
+		else if ('2' == g_char_in) {
+			queue_debug_statement(BLOCKED);
+		}
+		else if ('3' == g_char_in) {
+			queue_debug_statement(BLOCKED_ON_RECEIVING);
+		}
+		#endif
+		
 		/* setting the g_switch_flag */
 // 		if ( g_char_in == 'S' ) {
 // 			g_switch_flag = 1; 

@@ -293,3 +293,84 @@ void proc8(void)
 		release_memory_block(message);
 	}
 }
+
+void proc_wall_clock(void) {
+	char ASCII0 = '0';
+	MSG_BUF* output_msg;
+	MSG_BUF* incoming_msg;
+	MSG_BUF* self_msg = request_memory_block();
+	int sender_id;
+	//int curInd;
+	int display_flag = 0;
+	char* command_text;
+	int numHours;
+	int numMinutes;
+	int numSeconds;
+	U32 clock_time = 0;
+	MSG_BUF* kcd_reg_msg = request_memory_block();
+	kcd_reg_msg->mtype = KCD_REG;
+	kcd_reg_msg->mtext[0] = 'W';
+	kcd_reg_msg->mtext[1] = '\0';
+	send_message(PID_KCD, kcd_reg_msg);
+	while (1) {
+		incoming_msg = (MSG_BUF*) receive_message(&sender_id);
+		if (PID_CLOCK == sender_id) {
+			if (display_flag) {
+				delayed_send(PID_CLOCK, self_msg, 1000);
+			
+				clock_time = (clock_time + 1) % 86400;
+				
+				output_msg = (MSG_BUF*) k_request_memory_block();
+				output_msg->mtype = CRT_DISPLAY;
+				
+				output_msg->mtext[0] = (char)(clock_time/36000) + '0';
+				output_msg->mtext[1] = (char)((clock_time/3600) % 10) + '0';
+				output_msg->mtext[2] = ':';
+				output_msg->mtext[3] = (char) (((clock_time/60)%60)/10) + '0';
+				output_msg->mtext[4] = (char) (((clock_time/60)%60)%10) + '0';
+				output_msg->mtext[5] = ':';
+				output_msg->mtext[6] = (char) ((clock_time%60)/10) + '0';
+				output_msg->mtext[7] = (char) ((clock_time%60)/10) + '0';
+				output_msg->mtext[8] = '\0';
+				
+				send_message(PID_CRT, (void*) output_msg);
+			}
+		}
+		else if (PID_KCD == sender_id) {
+			command_text = incoming_msg->mtext;
+			if ('W' == command_text[1] && 'R' == command_text[2]) {
+				clock_time = 0;
+				display_flag = 1;
+			}
+			else if ('S' == command_text[2] && ' ' == command_text[3]) {
+				if (':' == command_text[6] && ':' == command_text[9]) {
+					numHours = (int)(command_text[4] - ASCII0) * 10 + (int)(command_text[5] - ASCII0) ;
+					numMinutes = (int)(command_text[7] - ASCII0) * 10 + (int)(command_text[8] - ASCII0);
+					numSeconds = (int)(command_text[10] - ASCII0) * 10 + (int)(command_text[11] - ASCII0);
+					
+					if ( (int)(command_text[4] - ASCII0) < 0 || (int)(command_text[4] - ASCII0) > 9 || (int)(command_text[5] - ASCII0) < 0 || (int)(command_text[5] - ASCII0) > 9
+						|| (int)(command_text[7] - ASCII0) < 0 || (int)(command_text[7] - ASCII0) > 9 || (int)(command_text[8] - ASCII0) < 0 || (int)(command_text[8] - ASCII0) > 9
+					  || (int)(command_text[10] - ASCII0) < 0 || (int)(command_text[10] - ASCII0) > 9 || (int)(command_text[11] - ASCII0) < 0 || (int)(command_text[11] - ASCII0) > 9
+						|| numHours > 23 || numMinutes > 59 || numSeconds > 59) {
+							//Invalid time format error
+						}
+						else {
+							clock_time = numSeconds+60*(numMinutes+60*numHours);
+							display_flag = 1;
+						}
+							
+				}
+				else {
+					//argument syntax error
+				}
+			}
+			else if ('T' == command_text[2]) {
+				display_flag= 0;
+			}
+			else {
+				//invalid command error
+			}
+			release_memory_block((void*)incoming_msg);
+		}
+	}
+}
