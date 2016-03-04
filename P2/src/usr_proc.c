@@ -33,11 +33,13 @@ void set_test_procs() {
 		g_test_procs[i].m_priority=LOWEST;
 		g_test_procs[i].m_stack_size=0x100;
 	}
-  
+
+	g_test_procs[3].m_pid = PID_CLOCK;
+	g_test_procs[3].m_priority=MEDIUM;
 	g_test_procs[0].mpf_start_pc = &proc7;
 	g_test_procs[1].mpf_start_pc = &proc8;
 	g_test_procs[2].mpf_start_pc = &proc9;
-	g_test_procs[3].mpf_start_pc = &proc4;
+	g_test_procs[3].mpf_start_pc = &proc_wall_clock;
 	g_test_procs[4].mpf_start_pc = &proc5;
 	g_test_procs[5].mpf_start_pc = &proc6;
 	g_test_procs[5].m_priority = HIGH;
@@ -72,7 +74,7 @@ void proc6(void){
 	set_process_priority(4, LOW);
 	set_process_priority(5, LOW);*/
 	
-	set_process_priority(3, HIGH);
+	//set_process_priority(3, HIGH);
 	set_process_priority(5, MEDIUM);
 	set_process_priority(6, LOWEST);
 	
@@ -367,6 +369,7 @@ void proc_wall_clock(void) {
 	kcd_reg_msg->mtext[0] = 'W';
 	kcd_reg_msg->mtext[1] = '\0';
 	send_message(PID_KCD, kcd_reg_msg);
+	self_msg->mtype = DEFAULT;
 	while (1) {
 		incoming_msg = (MSG_BUF*) receive_message(&sender_id);
 		if (PID_CLOCK == sender_id) {
@@ -385,19 +388,22 @@ void proc_wall_clock(void) {
 				output_msg->mtext[4] = (char) (((clock_time/60)%60)%10) + '0';
 				output_msg->mtext[5] = ':';
 				output_msg->mtext[6] = (char) ((clock_time%60)/10) + '0';
-				output_msg->mtext[7] = (char) ((clock_time%60)/10) + '0';
-				output_msg->mtext[8] = '\0';
+				output_msg->mtext[7] = (char) ((clock_time%60)%10) + '0';
+				output_msg->mtext[8] = '\n';
+				output_msg->mtext[9] = '\r';
+				output_msg->mtext[10] = '\0';
 				
 				send_message(PID_CRT, (void*) output_msg);
 			}
 		}
 		else if (PID_KCD == sender_id) {
 			command_text = incoming_msg->mtext;
-			if ('W' == command_text[1] && 'R' == command_text[2]) {
+			if ('W' == command_text[1] && 'R' == command_text[2] && '\0' == command_text[3]) {
 				clock_time = 0;
 				display_flag = 1;
+				delayed_send(PID_CLOCK, self_msg, 1000);
 			}
-			else if ('S' == command_text[2] && ' ' == command_text[3]) {
+			else if ('S' == command_text[2] && ' ' == command_text[3] && '\0' == command_text[12]) {
 				if (':' == command_text[6] && ':' == command_text[9]) {
 					numHours = (int)(command_text[4] - ASCII0) * 10 + (int)(command_text[5] - ASCII0) ;
 					numMinutes = (int)(command_text[7] - ASCII0) * 10 + (int)(command_text[8] - ASCII0);
@@ -412,6 +418,7 @@ void proc_wall_clock(void) {
 						else {
 							clock_time = numSeconds+60*(numMinutes+60*numHours);
 							display_flag = 1;
+							delayed_send(PID_CLOCK, self_msg, 1000);
 						}
 							
 				}
@@ -419,7 +426,7 @@ void proc_wall_clock(void) {
 					//argument syntax error
 				}
 			}
-			else if ('T' == command_text[2]) {
+			else if ('T' == command_text[2] && '\0' == command_text[3]) {
 				display_flag= 0;
 			}
 			else {

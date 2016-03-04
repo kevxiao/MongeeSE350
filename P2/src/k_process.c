@@ -65,11 +65,11 @@ void process_init()
 	g_proc_table[NUM_TEST_PROCS + 1].m_pid = PID_KCD;
 	g_proc_table[NUM_TEST_PROCS + 1].m_stack_size = 0x100;
 	g_proc_table[NUM_TEST_PROCS + 1].mpf_start_pc = &kcdproc;
-	g_proc_table[NUM_TEST_PROCS + 1].m_priority = -2;
+	g_proc_table[NUM_TEST_PROCS + 1].m_priority = 5;
 	g_proc_table[NUM_TEST_PROCS + 2].m_pid = PID_CRT;
 	g_proc_table[NUM_TEST_PROCS + 2].m_stack_size = 0x100;
 	g_proc_table[NUM_TEST_PROCS + 2].mpf_start_pc = &crtproc;
-	g_proc_table[NUM_TEST_PROCS + 2].m_priority = -2;
+	g_proc_table[NUM_TEST_PROCS + 2].m_priority = 5;
 	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
 		g_proc_table[i].m_pid = g_test_procs[i].m_pid;
 		g_proc_table[i].m_stack_size = g_test_procs[i].m_stack_size;
@@ -96,7 +96,7 @@ void process_init()
 		
 		// set priority and put into correct list
 		(gp_pcbs[i])->mp_next = NULL;
-		if ((gp_pcbs[i])->m_priority == -2) {
+		if ((gp_pcbs[i])->m_priority == 5) {
 			if (gp_sys_procs_end != NULL) {
 				gp_sys_procs_end->mp_next = (gp_pcbs[i]);
 			} else {
