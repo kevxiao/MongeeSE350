@@ -45,6 +45,15 @@ PCB* gp_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 
 extern uint32_t g_timer_count;
 
+typedef struct reg_com_id
+{
+	void *mp_next;		/* ptr to next message received*/
+	int mpid;              /* user defined message type */
+	char mtext_id[1];          /* body of the message */
+} REG_COM_ID;
+
+REG_COM_ID* gp_reg_com_head = NULL;
+
 /**
  * @brief: the null process
  */
@@ -68,25 +77,87 @@ void crtproc(void){
 	}
 }
 
+void set_command_id(int pid, char* identifier)  {
+	REG_COM_ID* prev;
+	REG_COM_ID* cur;
+	int i = 0;
+	
+	prev = NULL;
+	
+	cur = gp_reg_com_head;
+	
+	while (NULL != cur) {
+		if (cur->mpid == pid) {
+			break;
+		}
+		prev = cur;
+		cur = (REG_COM_ID*) cur->mp_next;
+	}
+	if (NULL == cur) {
+		cur = (REG_COM_ID*) k_request_memory_block();
+	}
+	
+	cur->mpid = pid;
+	cur->mp_next = NULL;
+	while ('\0' != identifier[i]) {
+		cur->mtext_id[i] = identifier[i];
+		i++;
+	}
+	
+	if (NULL == prev) {
+		gp_reg_com_head = cur;
+	}
+}
+
+int get_pid_from_com_id(char* command) {
+	REG_COM_ID* cur = gp_reg_com_head;
+	int i;
+	//int pid;
+	int found;
+	while (NULL != cur) {
+		found = 1;
+		i = 0;
+		while ('\0' != cur->mtext_id[i]) {
+			if (cur->mtext_id[i] != command[i]) {
+				found = 0;
+				break;
+			}
+			i++;
+		}
+		if (found && '\0' == command[i]) {
+			return cur->mpid;
+		}
+	}
+	return RTX_ERR;
+}
+
 void kcdproc(void) {
 	MSG_BUF* command_msg;
 	//MSG_BUF* string_msg;
 	int sender_id;
+	int pid;
 	char* command_text;
 	while (1) {
 		command_msg = (MSG_BUF*) k_receive_message(&sender_id);
 		//execute command
 		command_text = command_msg->mtext;
+		if (KCD_REG == command_msg->mtype) {
+			set_command_id(sender_id, command_text);
+			k_release_memory_block(command_msg);
+		}
 		//check if valid command
-		if ('%' == command_text[0]) {
-			if ('W' == command_text[1]) {
-				k_send_message(PID_CLOCK, command_msg);
+		else if ('%' == command_text[0]) {
+			pid = get_pid_from_com_id(&(command_text[1]));
+			if (RTX_ERR != pid) {
+				k_send_message(pid, (void*)command_msg);
 			}
 			else {
-				//invalid command error
+				//unrecognized command
 			}
 		}
-		k_release_memory_block(command_msg);
+		else {
+			k_release_memory_block(command_msg);
+		}
 	}
 }
 
