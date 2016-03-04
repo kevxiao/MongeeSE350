@@ -9,6 +9,7 @@
 #include <LPC17xx.h>
 #include "timer.h"
 #include "rtx.h"
+#include "k_process.h"
 
 #define BIT(X) (1<<X)
 
@@ -16,12 +17,25 @@ volatile uint32_t g_timer_count = 0; // increment every 1 ms
 
 extern MSG_BUF* gp_delayed_msgs;//DELAYED_MSG_QUEUE g_delayed_msg_queue;
 
+PCB* gp_timer_pcb;
+extern PCB* gp_current_process;
+extern PCB** gp_pcbs;	
+
 /**
  * @brief: initialize timer. Only timer 0 is supported
  */
 uint32_t timer_init(uint8_t n_timer) 
 {
 	LPC_TIM_TypeDef *pTimer;
+	int i;
+	
+	for ( i = 0; i < NUM_TEST_PROCS + NUM_SYS_PROCS + NUM_USER_PROCS + NUM_IRQ_PROCS; i++ ) {
+		if (PID_UART_IPROC == gp_pcbs[i]->m_pid) {
+			gp_timer_pcb = gp_pcbs[i];
+			break;
+		}
+	}
+	
 	if (n_timer == 0) {
 		/*
 		Steps 1 & 2: system control configuration.
@@ -115,7 +129,11 @@ __asm void TIMER0_IRQHandler(void)
 void c_TIMER0_IRQHandler(void)
 {
 	int orig_sender;
+	PCB* orig_proc = gp_current_process;
 	MSG_BUF* temp;
+	
+	gp_current_process = gp_timer_pcb;
+	
 	/* ack inttrupt, see section  21.6.1 on pg 493 of LPC17XX_UM */
 	LPC_TIM0->IR = BIT(0);  
 	
@@ -129,5 +147,6 @@ void c_TIMER0_IRQHandler(void)
 		k_send_message(temp->m_recv_pid, (void*) temp);
 		temp->m_send_pid = orig_sender;
 	}
+	gp_current_process = orig_proc;
 }
 

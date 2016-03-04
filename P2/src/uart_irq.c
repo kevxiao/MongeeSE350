@@ -12,6 +12,7 @@
 #ifdef DEBUG_0
 #include "printf.h"
 #endif
+#include "k_process.h"
 
 
 uint8_t g_buffer[]  = "placeholder text";
@@ -25,6 +26,10 @@ volatile MSG_BUF* gp_cur_msg_buf = NULL;
 MSG_BUF* gp_cur_char = NULL;
 int g_entering_kc = 0;
 
+PCB* gp_uart_pcb;
+extern PCB* gp_current_process;
+extern PCB** gp_pcbs;	
+
 extern uint32_t g_switch_flag;
 
 /**
@@ -35,11 +40,16 @@ extern uint32_t g_switch_flag;
  */
 int uart_irq_init(int n_uart) {
 	
-	
+	int i;
 	
 	LPC_UART_TypeDef *pUart;
 	
-	//g_buffer =
+	for ( i = 0; i < NUM_TEST_PROCS + NUM_SYS_PROCS + NUM_USER_PROCS + NUM_IRQ_PROCS; i++ ) {
+		if (PID_UART_IPROC == gp_pcbs[i]->m_pid) {
+			gp_uart_pcb = gp_pcbs[i];
+			break;
+		}
+	}
 	
 	if ( n_uart ==0 ) {
 		/*
@@ -194,6 +204,9 @@ void c_UART0_IRQHandler(void)
 	MSG_BUF* cur_char_msg;
 	uint8_t IIR_IntId;	    // Interrupt ID from IIR 		 
 	LPC_UART_TypeDef *pUart = (LPC_UART_TypeDef *)LPC_UART0;
+	PCB* orig_proc = gp_current_process;
+	
+	gp_current_process = gp_uart_pcb;
 	
 #ifdef DEBUG_0
 	uart1_put_string("Entering c_UART0_IRQHandler\n\r");
@@ -293,8 +306,10 @@ void c_UART0_IRQHandler(void)
 #ifdef DEBUG_0
 			uart1_put_string("Should not get here!\n\r");
 #endif // DEBUG_0
+		gp_current_process = orig_proc;
 		return;
 	}	
+	gp_current_process = orig_proc;
 }
 
 void write_to_CRT(char* text){
