@@ -21,7 +21,7 @@
 #endif /* DEBUG_0 */
 
 int main() 
-	{	
+{	
 	/* CMSIS system initialization */
 	SystemInit(); 
 #ifdef DEBUG_0

@@ -114,6 +114,7 @@ __asm void TIMER0_IRQHandler(void)
  */
 void c_TIMER0_IRQHandler(void)
 {
+	int orig_sender;
 	MSG_BUF* temp;
 	/* ack inttrupt, see section  21.6.1 on pg 493 of LPC17XX_UM */
 	LPC_TIM0->IR = BIT(0);  
@@ -124,7 +125,9 @@ void c_TIMER0_IRQHandler(void)
 	while (gp_delayed_msgs != NULL && gp_delayed_msgs->m_send_time <= g_timer_count) {
 		temp = gp_delayed_msgs;
 		gp_delayed_msgs = gp_delayed_msgs->mp_next;
+		orig_sender = temp->m_send_pid;
 		k_send_message(temp->m_recv_pid, (void*) temp);
+		temp->m_send_pid = orig_sender;
 	}
 }
 
