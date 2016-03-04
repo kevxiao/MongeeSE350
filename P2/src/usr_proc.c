@@ -32,8 +32,8 @@ void set_test_procs() {
 		g_test_procs[i].m_stack_size=0x100;
 	}
   
-	g_test_procs[0].mpf_start_pc = &proc1;
-	g_test_procs[1].mpf_start_pc = &proc2;
+	g_test_procs[0].mpf_start_pc = &proc7;
+	g_test_procs[1].mpf_start_pc = &proc8;
 	g_test_procs[2].mpf_start_pc = &proc3;
 	g_test_procs[3].mpf_start_pc = &proc4;
 	g_test_procs[4].mpf_start_pc = &proc5;
@@ -71,8 +71,8 @@ void proc6(void){
 	set_process_priority(5, LOW);
 	
 	//TEST 2
-	set_process_priority(1, MEDIUM);
 	set_process_priority(2, MEDIUM);
+	set_process_priority(1, MEDIUM);
 	set_process_priority(6, LOWEST);
 	release_processor();
 	
@@ -80,7 +80,7 @@ void proc6(void){
 	
 	set_process_priority(1, LOW);
 	set_process_priority(2, LOW);
-	
+	/*
 	//TEST 3
 	set_process_priority(3, MEDIUM);
 	set_process_priority(1, MEDIUM);
@@ -154,8 +154,9 @@ void proc6(void){
 	uart0_put_char('/');
 	uart0_put_char('0'+total);
 	uart0_put_string(" tests FAIL\n\r");
-	
+	*/
 	uart0_put_string("G008_test: END\n\r");
+	
 	while (1) {
 		release_processor();
 	}
@@ -261,15 +262,18 @@ void proc5(void)
 void proc7(void)
 {
 	MSG_BUF* message = request_memory_block();
-	char text[15] = "This is a test";
 	int i = 0;
+	char text[17] = "This is a test\n\r";
+	
 	while ( 1) {
 		while(text[i]!='\0'){
 			message->mtext[i] = text[i];
 			i++;
 		}
-		message->mtype = DEFAULT;
-		send_message(PID_P4 ,message);
+		message->mtext[i] = text[i];
+		message->mtype = CRT_DISPLAY;
+		send_message(PID_CRT ,message);
+		release_processor();
 	}
 }
 
@@ -279,11 +283,11 @@ void proc7(void)
 void proc8(void)
 {
 	int i=0;
-	int* sender_id;
-	MSG_BUF* message = receive_message(sender_id);
+	int sender_id;
+	MSG_BUF* message = receive_message(&sender_id);
 	while ( 1) {
 		#ifdef DEBUG_0
-			printf("Received the following message from process %d:\n\r", *sender_id);
+			printf("Received the following message from process %d:\n\r", sender_id);
 			while(message->mtext[i]!='\0'){
 				printf("%c", message->mtext[i]);
 				i++;
@@ -291,6 +295,7 @@ void proc8(void)
 		#endif
 		
 		release_memory_block(message);
+		set_process_priority(6, HIGH);
 	}
 }
 

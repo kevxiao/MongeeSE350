@@ -25,7 +25,9 @@ void crtproc(void){
 	
 	while(1){
 		message = receive_message(&sender_pid);
-		write_to_CRT(message->mtext);
+		if(CRT_DISPLAY == message->mtype) {
+			write_to_CRT(message->mtext);
+		}
 		release_memory_block(message);
 		release_processor();
 	}

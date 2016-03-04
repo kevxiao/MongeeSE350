@@ -35,11 +35,8 @@ U32 g_switch_flag = 0;         /* whether to continue to run the process before 
 				/* this value will be set by UART handler */
 
 /* process initialization table */
-PROC_INIT g_proc_table[NUM_TEST_PROCS + 3];
-extern PROC_INIT g_test_procs[NUM_TEST_PROCS + 3];
-extern void nullproc(void);
-extern void kcdproc(void);
-extern void crtproc(void);
+PROC_INIT g_proc_table[NUM_TEST_PROCS + NUM_SYS_PROCS];
+extern PROC_INIT g_test_procs[NUM_TEST_PROCS + NUM_SYS_PROCS];
 
 //DELAYED_MSGS g_delayed_msgs;
 
@@ -66,11 +63,11 @@ void process_init()
 	g_proc_table[NUM_TEST_PROCS + 1].m_pid = PID_KCD;
 	g_proc_table[NUM_TEST_PROCS + 1].m_stack_size = 0x100;
 	g_proc_table[NUM_TEST_PROCS + 1].mpf_start_pc = &kcdproc;
-	g_proc_table[NUM_TEST_PROCS + 1].m_priority = LOWEST;
+	g_proc_table[NUM_TEST_PROCS + 1].m_priority = HIGH;
 	g_proc_table[NUM_TEST_PROCS + 2].m_pid = PID_CRT;
 	g_proc_table[NUM_TEST_PROCS + 2].m_stack_size = 0x100;
 	g_proc_table[NUM_TEST_PROCS + 2].mpf_start_pc = &crtproc;
-	g_proc_table[NUM_TEST_PROCS + 2].m_priority = LOWEST;
+	g_proc_table[NUM_TEST_PROCS + 2].m_priority = HIGH;
 	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
 		g_proc_table[i].m_pid = g_test_procs[i].m_pid;
 		g_proc_table[i].m_stack_size = g_test_procs[i].m_stack_size;
@@ -79,7 +76,7 @@ void process_init()
 	}
   
 	/* initilize exception stack frame (i.e. initial context) for each process */
-	for ( i = 0; i < NUM_TEST_PROCS + 3; i++ ) {
+	for ( i = 0; i < NUM_TEST_PROCS + NUM_SYS_PROCS; i++ ) {
 		int j;
 		(gp_pcbs[i])->m_pid = (g_proc_table[i]).m_pid;
 		(gp_pcbs[i])->m_priority = (g_proc_table[i]).m_priority;
@@ -327,7 +324,9 @@ int k_send_message(int process_id, void *message_envelope) {
 	PCB *receiving = NULL;
 	MSG_BUF * new_node = (MSG_BUF*) message_envelope;
 	int i;
-	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
+	new_node->m_recv_pid = process_id;
+	new_node->m_send_pid = gp_current_process->m_pid;
+	for ( i = 0; i < NUM_TEST_PROCS + NUM_SYS_PROCS; i++ ) {
 		if ((gp_pcbs[i])->m_pid == process_id) {
 			receiving = gp_pcbs[i];
 		}
@@ -343,6 +342,7 @@ int k_send_message(int process_id, void *message_envelope) {
 		}
 		if (BLOCKED_ON_RECEIVE == receiving->m_state) {
 			receiving->m_state = RDY;
+			
 			//PUT INTO receiving process queue???
 		}
 		return RTX_OK;
