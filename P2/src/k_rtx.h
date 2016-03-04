@@ -9,6 +9,7 @@
 #define K_RTX_H_
 
 #include "common.h"
+#include "sys_proc.h"
 
 /*----- Definitions -----*/
 

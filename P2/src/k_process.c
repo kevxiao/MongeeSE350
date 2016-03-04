@@ -35,11 +35,8 @@ U32 g_switch_flag = 0;         /* whether to continue to run the process before 
 				/* this value will be set by UART handler */
 
 /* process initialization table */
-PROC_INIT g_proc_table[NUM_TEST_PROCS + 3];
-extern PROC_INIT g_test_procs[NUM_TEST_PROCS + 3];
-extern void nullproc(void);
-extern void kcdproc(void);
-extern void crtproc(void);
+PROC_INIT g_proc_table[NUM_TEST_PROCS + NUM_SYS_PROCS];
+extern PROC_INIT g_test_procs[NUM_TEST_PROCS + NUM_SYS_PROCS];
 
 //DELAYED_MSGS g_delayed_msgs;
 
@@ -47,122 +44,6 @@ PCB* gp_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 PCB* gp_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 
 extern uint32_t g_timer_count;
-
-typedef struct reg_com_id
-{
-	void *mp_next;		/* ptr to next message received*/
-	int mpid;              /* user defined message type */
-	char mtext_id[1];          /* body of the message */
-} REG_COM_ID;
-
-REG_COM_ID* gp_reg_com_head = NULL;
-
-/**
- * @brief: the null process
- */
-void nullproc(void)
-{
-	while (1) {
-		k_release_processor();
-	}
-}
-
-void crtproc(void){
-	MSG_BUF *message;
-	int sender_pid;
-	uart_irq_init(0);
-	
-	while(1){
-		message = k_receive_message(&sender_pid);
-		write_to_CRT(message->mtext);
-		k_release_memory_block(message);
-		k_release_processor();
-	}
-}
-
-void set_command_id(int pid, char* identifier)  {
-	REG_COM_ID* prev;
-	REG_COM_ID* cur;
-	int i = 0;
-	
-	prev = NULL;
-	
-	cur = gp_reg_com_head;
-	
-	while (NULL != cur) {
-		if (cur->mpid == pid) {
-			break;
-		}
-		prev = cur;
-		cur = (REG_COM_ID*) cur->mp_next;
-	}
-	if (NULL == cur) {
-		cur = (REG_COM_ID*) k_request_memory_block();
-	}
-	
-	cur->mpid = pid;
-	cur->mp_next = NULL;
-	while ('\0' != identifier[i]) {
-		cur->mtext_id[i] = identifier[i];
-		i++;
-	}
-	
-	if (NULL == prev) {
-		gp_reg_com_head = cur;
-	}
-}
-
-int get_pid_from_com_id(char* command) {
-	REG_COM_ID* cur = gp_reg_com_head;
-	int i;
-	//int pid;
-	int found;
-	while (NULL != cur) {
-		found = 1;
-		i = 0;
-		while ('\0' != cur->mtext_id[i]) {
-			if (cur->mtext_id[i] != command[i]) {
-				found = 0;
-				break;
-			}
-			i++;
-		}
-		if (found && '\0' == command[i]) {
-			return cur->mpid;
-		}
-	}
-	return RTX_ERR;
-}
-
-void kcdproc(void) {
-	MSG_BUF* command_msg;
-	//MSG_BUF* string_msg;
-	int sender_id;
-	int pid;
-	char* command_text;
-	while (1) {
-		command_msg = (MSG_BUF*) k_receive_message(&sender_id);
-		//execute command
-		command_text = command_msg->mtext;
-		if (KCD_REG == command_msg->mtype) {
-			set_command_id(sender_id, command_text);
-			k_release_memory_block(command_msg);
-		}
-		//check if valid command
-		else if ('%' == command_text[0]) {
-			pid = get_pid_from_com_id(&(command_text[1]));
-			if (RTX_ERR != pid) {
-				k_send_message(pid, (void*)command_msg);
-			}
-			else {
-				//unrecognized command
-			}
-		}
-		else {
-			k_release_memory_block(command_msg);
-		}
-	}
-}
 
 /**
  * @brief: initialize all processes in the system
@@ -182,11 +63,11 @@ void process_init()
 	g_proc_table[NUM_TEST_PROCS + 1].m_pid = PID_KCD;
 	g_proc_table[NUM_TEST_PROCS + 1].m_stack_size = 0x100;
 	g_proc_table[NUM_TEST_PROCS + 1].mpf_start_pc = &kcdproc;
-	g_proc_table[NUM_TEST_PROCS + 1].m_priority = LOWEST;
+	g_proc_table[NUM_TEST_PROCS + 1].m_priority = HIGH;
 	g_proc_table[NUM_TEST_PROCS + 2].m_pid = PID_CRT;
 	g_proc_table[NUM_TEST_PROCS + 2].m_stack_size = 0x100;
 	g_proc_table[NUM_TEST_PROCS + 2].mpf_start_pc = &crtproc;
-	g_proc_table[NUM_TEST_PROCS + 2].m_priority = LOWEST;
+	g_proc_table[NUM_TEST_PROCS + 2].m_priority = HIGH;
 	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
 		g_proc_table[i].m_pid = g_test_procs[i].m_pid;
 		g_proc_table[i].m_stack_size = g_test_procs[i].m_stack_size;
@@ -195,7 +76,7 @@ void process_init()
 	}
   
 	/* initilize exception stack frame (i.e. initial context) for each process */
-	for ( i = 0; i < NUM_TEST_PROCS + 3; i++ ) {
+	for ( i = 0; i < NUM_TEST_PROCS + NUM_SYS_PROCS; i++ ) {
 		int j;
 		(gp_pcbs[i])->m_pid = (g_proc_table[i]).m_pid;
 		(gp_pcbs[i])->m_priority = (g_proc_table[i]).m_priority;
@@ -443,7 +324,9 @@ int k_send_message(int process_id, void *message_envelope) {
 	PCB *receiving = NULL;
 	MSG_BUF * new_node = (MSG_BUF*) message_envelope;
 	int i;
-	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
+	new_node->m_recv_pid = process_id;
+	new_node->m_send_pid = gp_current_process->m_pid;
+	for ( i = 0; i < NUM_TEST_PROCS + NUM_SYS_PROCS; i++ ) {
 		if ((gp_pcbs[i])->m_pid == process_id) {
 			receiving = gp_pcbs[i];
 		}
@@ -459,6 +342,7 @@ int k_send_message(int process_id, void *message_envelope) {
 		}
 		if (BLOCKED_ON_RECEIVE == receiving->m_state) {
 			receiving->m_state = RDY;
+			
 			//PUT INTO receiving process queue???
 		}
 		return RTX_OK;

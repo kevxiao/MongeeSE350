@@ -456,6 +456,11 @@
               <FileType>1</FileType>
               <FilePath>.\src\k_process.c</FilePath>
             </File>
+            <File>
+              <FileName>sys_proc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\sys_proc.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
