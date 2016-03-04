@@ -18,6 +18,7 @@ extern uint32_t g_timer_count;
 
 /* initialization table item */
 PROC_INIT g_test_procs[NUM_TEST_PROCS];
+PROC_INIT g_user_procs[NUM_USER_PROCS];
 
 void* used_mem_blocks[1000];
 int curr_index = 0;
@@ -34,15 +35,26 @@ void set_test_procs() {
 		g_test_procs[i].m_stack_size=0x100;
 	}
 
-	g_test_procs[3].m_pid = PID_CLOCK;
-	g_test_procs[3].m_priority=MEDIUM;
+
 	g_test_procs[0].mpf_start_pc = &proc7;
 	g_test_procs[1].mpf_start_pc = &proc8;
 	g_test_procs[2].mpf_start_pc = &proc9;
-	g_test_procs[3].mpf_start_pc = &proc_wall_clock;
+	g_test_procs[3].mpf_start_pc = &proc4;
 	g_test_procs[4].mpf_start_pc = &proc5;
 	g_test_procs[5].mpf_start_pc = &proc6;
 	g_test_procs[5].m_priority = HIGH;
+}
+
+void set_user_procs() {
+	int i;
+	for( i = 0; i < NUM_USER_PROCS; i++ ) {
+		g_user_procs[i].m_priority=LOWEST;
+		g_user_procs[i].m_stack_size=0x100;
+	}
+
+	g_user_procs[0].m_pid = PID_CLOCK;
+	g_user_procs[0].m_priority=MEDIUM;
+	g_user_procs[0].mpf_start_pc = &proc_wall_clock;
 }
 
 void proc6(void){
@@ -75,8 +87,17 @@ void proc6(void){
 	set_process_priority(5, LOW);*/
 	
 	//set_process_priority(3, HIGH);
+	
+	set_process_priority(PID_CLOCK, HIGH);
+	set_process_priority(5,MEDIUM);
+	
+	set_process_priority(6, LOWEST);
+	
+	/*
 	set_process_priority(5, MEDIUM);
 	set_process_priority(6, LOWEST);
+	*/
+	
 	
 	//TEST 2
 	/*set_process_priority(2, MEDIUM);
@@ -270,19 +291,20 @@ void proc5(void)
  */
 void proc7(void)
 {
-	MSG_BUF* message = request_memory_block();
+	MSG_BUF* message;// = request_memory_block();
 	int i = 0;
 	char text[20] = "Delayed Message\n\r";
-	
 	while ( 1) {
+		message = request_memory_block();
+		i=0;
 		while(text[i]!='\0'){
 			message->mtext[i] = text[i];
 			i++;
 		}
 		message->mtext[i] = text[i];
 		message->mtype = CRT_DISPLAY;
-		//send_message(PID_CRT ,message);
-		delayed_send(PID_CRT, message, 1000);
+		send_message(PID_CRT ,message);
+		//delayed_send(PID_CRT, message, 1000);
 		release_processor();
 	}
 }

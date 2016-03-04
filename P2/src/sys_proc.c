@@ -8,11 +8,37 @@
 #include "printf.h"
 #endif /* DEBUG_0 */
 
+PROC_INIT g_sys_procs[NUM_SYS_PROCS];
+PROC_INIT g_irq_procs[NUM_IRQ_PROCS];
 REG_COM_ID* gp_reg_com_head = NULL;
 
-/**
- * @brief: the null process
- */
+void set_sys_procs() {
+	int i;
+	for( i = 0; i < NUM_SYS_PROCS; i++ ) {
+		g_sys_procs[i].m_priority=5;
+		g_sys_procs[i].m_stack_size=0x100;
+	}
+	g_sys_procs[0].m_priority = 4;
+	g_sys_procs[0].m_pid = PID_NULL;
+	g_sys_procs[0].mpf_start_pc = &nullproc;
+	g_sys_procs[1].m_pid = PID_KCD;
+	g_sys_procs[1].mpf_start_pc = &kcdproc;
+	g_sys_procs[2].m_pid = PID_CRT;
+	g_sys_procs[2].mpf_start_pc = &crtproc;
+}
+
+void set_irq_procs() {
+	int i;
+	for( i = 0; i < NUM_IRQ_PROCS; i++ ) {
+		g_irq_procs[i].m_priority=6;
+		g_irq_procs[i].m_stack_size=0x100;
+	}
+	g_irq_procs[0].m_pid = PID_TIMER_IPROC;
+	g_irq_procs[0].mpf_start_pc = NULL;
+	g_irq_procs[1].m_pid = PID_UART_IPROC;
+	g_irq_procs[1].mpf_start_pc = NULL;
+}
+
 void nullproc(void)
 {
 	while (1) {

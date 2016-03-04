@@ -2,7 +2,10 @@
 #define SYS_PROC_H
 
 #define NUM_SYS_PROCS 3
+#define NUM_IRQ 2
 
+void set_sys_procs(void);
+void set_irq_procs(void);
 void nullproc(void);
 void crtproc(void);
 void kcdproc(void);
