@@ -31,7 +31,7 @@ void crtproc(void){
 			write_to_CRT(message->mtext);
 		}
 		release_memory_block(message);
-		release_processor();
+		//release_processor();
 	}
 }
 

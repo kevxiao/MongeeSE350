@@ -208,6 +208,8 @@ void c_UART0_IRQHandler(void)
 		g_buffer[12] = g_char_in; // nasty hack
 		g_send_char = 1;
 		
+		//write_to_CRT(&g_char_in);
+		
 		if (g_entering_kc) {
 			//add to msg_buf
 			//make sure you don't overflow the message buffer, could be like 100
@@ -279,14 +281,15 @@ void c_UART0_IRQHandler(void)
 }
 
 void write_to_CRT(char* text){
-	
 	LPC_UART_TypeDef *pUart = (LPC_UART_TypeDef *)LPC_UART0;
+	
+	still_writing = 1;
 	
 	gp_buffer = (uint8_t *)text;	
 	pUart->IER = IER_THRE | IER_RLS | IER_RBR; // set these bits to 1
 	
-	while(still_writing){//continue releasing processor until the text is finished outputing
-		release_processor();
+	while(still_writing){
+		//continue writing until the text is finished
 	}
 	
 }

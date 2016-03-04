@@ -266,13 +266,13 @@ void proc7(void)
 	char text[17] = "This is a test\n\r";
 	
 	while ( 1) {
-		while(text[i]!='\0'){
+		/*while(text[i]!='\0'){
 			message->mtext[i] = text[i];
 			i++;
 		}
 		message->mtext[i] = text[i];
 		message->mtype = CRT_DISPLAY;
-		send_message(PID_CRT ,message);
+		send_message(PID_CRT ,message);*/
 		release_processor();
 	}
 }
