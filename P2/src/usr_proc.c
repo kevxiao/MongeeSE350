@@ -34,18 +34,14 @@ void set_test_procs() {
 		g_test_procs[i].m_stack_size=0x100;
 	}
 	
-	g_test_procs[2].m_pid=(U32)(PID_CLOCK);
-	g_test_procs[2].m_priority=MEDIUM;
-	g_test_procs[2].m_stack_size=0x100;
+	g_test_procs[3].m_pid=(U32)(PID_CLOCK);
+	g_test_procs[3].m_priority=MEDIUM;
+	g_test_procs[3].m_stack_size=0x100;
 
 	g_test_procs[0].mpf_start_pc = &proc7;
 	g_test_procs[1].mpf_start_pc = &proc8;
-<<<<<<< HEAD
-	g_test_procs[2].mpf_start_pc = &proc_wall_clock;
-=======
 	g_test_procs[2].mpf_start_pc = &proc9;
->>>>>>> 068f38fcf67f6601ba74ffefb93c587d86759295
-	g_test_procs[3].mpf_start_pc = &proc4;
+	g_test_procs[3].mpf_start_pc = &proc_wall_clock;
 	g_test_procs[4].mpf_start_pc = &proc5;
 	g_test_procs[5].mpf_start_pc = &proc6;
 	g_test_procs[5].m_priority = HIGH;
