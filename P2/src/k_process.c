@@ -42,6 +42,8 @@ extern PROC_INIT g_test_procs[NUM_TEST_PROCS + NUM_SYS_PROCS];
 
 PCB* gp_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 PCB* gp_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
+PCB* gp_sys_procs_begin = NULL;
+PCB* gp_sys_procs_end = NULL;
 
 extern uint32_t g_timer_count;
 
@@ -63,11 +65,11 @@ void process_init()
 	g_proc_table[NUM_TEST_PROCS + 1].m_pid = PID_KCD;
 	g_proc_table[NUM_TEST_PROCS + 1].m_stack_size = 0x100;
 	g_proc_table[NUM_TEST_PROCS + 1].mpf_start_pc = &kcdproc;
-	g_proc_table[NUM_TEST_PROCS + 1].m_priority = HIGH;
+	g_proc_table[NUM_TEST_PROCS + 1].m_priority = -2;
 	g_proc_table[NUM_TEST_PROCS + 2].m_pid = PID_CRT;
 	g_proc_table[NUM_TEST_PROCS + 2].m_stack_size = 0x100;
 	g_proc_table[NUM_TEST_PROCS + 2].mpf_start_pc = &crtproc;
-	g_proc_table[NUM_TEST_PROCS + 2].m_priority = HIGH;
+	g_proc_table[NUM_TEST_PROCS + 2].m_priority = -2;
 	for ( i = 0; i < NUM_TEST_PROCS; i++ ) {
 		g_proc_table[i].m_pid = g_test_procs[i].m_pid;
 		g_proc_table[i].m_stack_size = g_test_procs[i].m_stack_size;
@@ -94,12 +96,21 @@ void process_init()
 		
 		// set priority and put into correct list
 		(gp_pcbs[i])->mp_next = NULL;
-		if (gp_priority_end[(gp_pcbs[i])->m_priority] != NULL) {
-			gp_priority_end[(gp_pcbs[i])->m_priority]->mp_next = (gp_pcbs[i]);
+		if ((gp_pcbs[i])->m_priority == -2) {
+			if (gp_sys_procs_end != NULL) {
+				gp_sys_procs_end->mp_next = (gp_pcbs[i]);
+			} else {
+				gp_sys_procs_begin = (gp_pcbs[i]);
+			}
+			gp_sys_procs_end = (gp_pcbs[i]);
 		} else {
-			gp_priority_begin[(gp_pcbs[i])->m_priority] = (gp_pcbs[i]);
+			if (gp_priority_end[(gp_pcbs[i])->m_priority] != NULL) {
+				gp_priority_end[(gp_pcbs[i])->m_priority]->mp_next = (gp_pcbs[i]);
+			} else {
+				gp_priority_begin[(gp_pcbs[i])->m_priority] = (gp_pcbs[i]);
+			}
+			gp_priority_end[(gp_pcbs[i])->m_priority] = (gp_pcbs[i]);
 		}
-		gp_priority_end[(gp_pcbs[i])->m_priority] = (gp_pcbs[i]);
 	}
 }
 
@@ -116,6 +127,37 @@ PCB *scheduler(void)
 	PCB* prev_pcb = NULL;
 	int i;
 	// go through priorities in order and find the first unblocked process
+	
+	cur_pcb = gp_sys_procs_begin;
+	while(cur_pcb != NULL){
+		if(cur_pcb->m_state != BLOCKED && cur_pcb->m_state != BLOCKED_ON_RECEIVE){
+			if(prev_pcb != NULL){
+				prev_pcb->mp_next = cur_pcb->mp_next;
+				if (prev_pcb->mp_next == NULL) {
+					gp_sys_procs_end = prev_pcb;
+				}
+			}else{
+				gp_sys_procs_begin = cur_pcb->mp_next;
+				if(gp_sys_procs_begin == NULL){
+					gp_sys_procs_end = NULL;
+				}
+			}
+			cur_pcb->mp_next = NULL;
+			
+			if(gp_sys_procs_end != NULL){
+				gp_sys_procs_end->mp_next = cur_pcb;
+			}else{
+				gp_sys_procs_begin = cur_pcb;
+			}
+			gp_sys_procs_end = cur_pcb;
+
+			return cur_pcb;
+		}
+		
+		prev_pcb = cur_pcb;
+		cur_pcb = cur_pcb->mp_next;
+	}
+	
 	for(i=0;i<NUM_PRIORITIES;++i){
 		cur_pcb = gp_priority_begin[i];
 		prev_pcb = NULL;
