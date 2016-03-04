@@ -14,6 +14,8 @@
 #include "printf.h"
 #endif /* DEBUG_0 */
 
+extern uint32_t g_timer_count;
+
 /* initialization table item */
 PROC_INIT g_test_procs[NUM_TEST_PROCS];
 
@@ -34,7 +36,7 @@ void set_test_procs() {
   
 	g_test_procs[0].mpf_start_pc = &proc7;
 	g_test_procs[1].mpf_start_pc = &proc8;
-	g_test_procs[2].mpf_start_pc = &proc3;
+	g_test_procs[2].mpf_start_pc = &proc9;
 	g_test_procs[3].mpf_start_pc = &proc4;
 	g_test_procs[4].mpf_start_pc = &proc5;
 	g_test_procs[5].mpf_start_pc = &proc6;
@@ -59,7 +61,7 @@ void proc6(void){
 	set_process_priority(4, LOW);
 	set_process_priority(5, LOW);
 	
-	//TEST 1
+	/*//TEST 1
 	set_process_priority(4, MEDIUM);
 	set_process_priority(5, MEDIUM);
 	set_process_priority(6, LOWEST);
@@ -68,18 +70,22 @@ void proc6(void){
 	locMemoryAllocated = memoryAllocated;
 	
 	set_process_priority(4, LOW);
-	set_process_priority(5, LOW);
+	set_process_priority(5, LOW);*/
+	
+	set_process_priority(3, HIGH);
+	set_process_priority(5, MEDIUM);
+	set_process_priority(6, LOWEST);
 	
 	//TEST 2
-	set_process_priority(2, MEDIUM);
+	/*set_process_priority(2, MEDIUM);
 	set_process_priority(1, MEDIUM);
 	set_process_priority(6, LOWEST);
 	release_processor();
-	
+	*/
 	locProc1Run = proc1_count;
 	
-	set_process_priority(1, LOW);
-	set_process_priority(2, LOW);
+	//set_process_priority(1, LOW);
+	//set_process_priority(2, LOW);
 	/*
 	//TEST 3
 	set_process_priority(3, MEDIUM);
@@ -232,7 +238,7 @@ void proc5(void)
 {
 	int i=0;
 	while(1){
-		if (i == 0) {
+		/*if (i == 0) {
 			memoryAllocated = 0;		
 		}
 		if ( i != 0 && i%5 == 0 ) {
@@ -252,7 +258,8 @@ void proc5(void)
 				curr_index--;
 			}
 			set_process_priority(6, HIGH);
-		}
+		}*/
+		release_processor();
 	}
 }
 
@@ -263,16 +270,17 @@ void proc7(void)
 {
 	MSG_BUF* message = request_memory_block();
 	int i = 0;
-	char text[17] = "This is a test\n\r";
+	char text[20] = "Delayed Message\n\r";
 	
 	while ( 1) {
-		/*while(text[i]!='\0'){
+		while(text[i]!='\0'){
 			message->mtext[i] = text[i];
 			i++;
 		}
 		message->mtext[i] = text[i];
 		message->mtype = CRT_DISPLAY;
-		send_message(PID_CRT ,message);*/
+		//send_message(PID_CRT ,message);
+		delayed_send(PID_CRT, message, 1000);
 		release_processor();
 	}
 }
@@ -282,7 +290,16 @@ void proc7(void)
  */
 void proc8(void)
 {
-	int i=0;
+	
+	while(1) {
+		#ifdef DEBUG_0
+			printf("Current Time: %d\n\r", g_timer_count);
+		#endif
+		release_processor();
+	}
+
+	
+	/*int i=0;
 	int sender_id;
 	MSG_BUF* message = receive_message(&sender_id);
 	while ( 1) {
@@ -296,6 +313,39 @@ void proc8(void)
 		
 		release_memory_block(message);
 		set_process_priority(6, HIGH);
+	}*/
+}
+
+void proc9(void)
+{
+	MSG_BUF* message;// = request_memory_block();
+	int i = 0;
+	char text[20] = "Delayed Message\n\r";
+	int sender_id;
+	int send_time;
+	int receive_time;
+	MSG_BUF* received_message;
+	while ( 1) {
+		message = request_memory_block();
+		i=0;
+		while(text[i]!='\0'){
+			message->mtext[i] = text[i];
+			i++;
+		}
+		message->mtext[i] = text[i];
+		message->mtype = DEFAULT;
+		//send_message(PID_CRT ,message);
+		delayed_send(3, message, 5000);
+		send_time = g_timer_count;
+		i=0;
+		received_message = receive_message(&sender_id);
+		receive_time = g_timer_count;
+		printf("Received the following message from process %d with delay %dms:\n\r", sender_id, receive_time - send_time);
+		while(message->mtext[i]!='\0'){
+				printf("%c", message->mtext[i]);
+				i++;
+		}
+		release_memory_block(received_message);
 	}
 }
 

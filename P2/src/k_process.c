@@ -377,6 +377,9 @@ int k_delayed_send(int process_id, void *message_envelope, int delay) {
 	
 	new_msg->m_send_time = sendTime;
 	
+	new_msg->m_recv_pid = process_id;
+	new_msg->m_send_pid = gp_current_process->m_pid;
+	
 	while(cur != NULL && cur->m_send_time < sendTime ){
 		prev = cur;
 		cur = cur->mp_next;
@@ -397,16 +400,28 @@ int k_delayed_send(int process_id, void *message_envelope, int delay) {
 void queue_debug_statement(PROC_STATE_E state) {
 	int i = 0;
 	PCB* cur_pcb = NULL;
+	printf("State ");
+	if(state == RDY) {
+		printf("READY");
+	} else if(state == BLOCKED) {
+		printf("BLOCKED");
+	} else if(state == BLOCKED_ON_RECEIVE) {
+		printf("BLOCKED OF RECEIVE");
+	} else {
+		printf("UNKNOWN");
+	}
+	printf(":\n\r");
 	for ( i = 0; i < NUM_PRIORITIES; ++i) {
-		printf("Priority: %d\n\r", i);
+		printf("    Priority %d: ", i);
 		cur_pcb = gp_priority_begin[i];
 		while (cur_pcb != NULL) {
 			if (cur_pcb->m_state == state /*|| (state == RDY && cur_pcb->m_state == NEW)*/) {
 				#ifdef DEBUG_0
-				printf("\t%u\n\r", cur_pcb->m_pid );
+				printf(" %u", cur_pcb->m_pid );
 				#endif
 			}
 			cur_pcb = cur_pcb->mp_next;
 		}
+		printf("\n\r");
 	}
 }
