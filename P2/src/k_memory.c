@@ -136,7 +136,7 @@ void *k_request_memory_block(void) {
 	//int i = 0;
 	mem_blk* temp = p_heap_head;
 #ifdef DEBUG_0 
-	printf("k_request_memory_block: entering...\n\r");
+	printf("k_request_memory_block: requesting block @ 0x%x\n\r", p_heap_head);
 #endif /* ! DEBUG_0 */
 	while (NULL == p_heap_head) {
 		#ifdef DEBUG_0

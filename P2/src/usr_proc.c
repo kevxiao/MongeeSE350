@@ -31,10 +31,14 @@ void set_test_procs() {
 		g_test_procs[i].m_priority=LOWEST;
 		g_test_procs[i].m_stack_size=0x100;
 	}
-  
+	
+	g_test_procs[2].m_pid=(U32)(PID_CLOCK);
+	g_test_procs[2].m_priority=MEDIUM;
+	g_test_procs[2].m_stack_size=0x100;
+
 	g_test_procs[0].mpf_start_pc = &proc7;
 	g_test_procs[1].mpf_start_pc = &proc8;
-	g_test_procs[2].mpf_start_pc = &proc3;
+	g_test_procs[2].mpf_start_pc = &proc_wall_clock;
 	g_test_procs[3].mpf_start_pc = &proc4;
 	g_test_procs[4].mpf_start_pc = &proc5;
 	g_test_procs[5].mpf_start_pc = &proc6;
@@ -60,19 +64,20 @@ void proc6(void){
 	set_process_priority(5, LOW);
 	
 	//TEST 1
-	set_process_priority(4, MEDIUM);
-	set_process_priority(5, MEDIUM);
-	set_process_priority(6, LOWEST);
-	release_processor();
-	
-	locMemoryAllocated = memoryAllocated;
-	
-	set_process_priority(4, LOW);
-	set_process_priority(5, LOW);
+// 	set_process_priority(4, MEDIUM);
+// 	set_process_priority(5, MEDIUM);
+// 	set_process_priority(6, LOWEST);
+// 	release_processor();
+// 	
+// 	locMemoryAllocated = memoryAllocated;
+// 	
+// 	set_process_priority(4, LOW);
+// 	set_process_priority(5, LOW);
 	
 	//TEST 2
 	set_process_priority(2, MEDIUM);
 	set_process_priority(1, MEDIUM);
+	set_process_priority(PID_CLOCK, MEDIUM);
 	set_process_priority(6, LOWEST);
 	release_processor();
 	

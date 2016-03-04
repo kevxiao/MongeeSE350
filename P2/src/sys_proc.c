@@ -61,6 +61,7 @@ void set_command_id(int pid, char* identifier)  {
 		cur->mtext_id[i] = identifier[i];
 		i++;
 	}
+	cur->mtext_id[i] = '\0';
 	
 	if (NULL == prev) {
 		gp_reg_com_head = cur;
@@ -82,9 +83,10 @@ int get_pid_from_com_id(char* command) {
 			}
 			i++;
 		}
-		if (found && '\0' == command[i]) {
+		if (found) {
 			return cur->mpid;
 		}
+		cur = cur->mp_next;
 	}
 	return RTX_ERR;
 }
@@ -103,9 +105,12 @@ void kcdproc(void) {
 			set_command_id(sender_id, command_text);
 			release_memory_block(command_msg);
 		}
+		else if (CRT_DISPLAY == command_msg->mtype) {
+			send_message(PID_CRT, (void*) command_msg);
+		}
 		//check if valid command
 		else if ('%' == command_text[0]) {
-			pid = get_pid_from_com_id(&(command_text[1]));
+			pid = get_pid_from_com_id(command_text+1);
 			if (RTX_ERR != pid) {
 				send_message(pid, (void*)command_msg);
 			}

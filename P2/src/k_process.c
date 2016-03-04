@@ -35,7 +35,7 @@ U32 g_switch_flag = 0;         /* whether to continue to run the process before 
 				/* this value will be set by UART handler */
 
 /* process initialization table */
-PROC_INIT g_proc_table[NUM_TEST_PROCS + NUM_SYS_PROCS];
+PROC_INIT g_proc_table[NUM_TEST_PROCS + NUM_SYS_PROCS + 4];
 extern PROC_INIT g_test_procs[NUM_TEST_PROCS + NUM_SYS_PROCS];
 
 //DELAYED_MSGS g_delayed_msgs;

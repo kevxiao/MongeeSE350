@@ -14,14 +14,15 @@
 #endif
 
 
-uint8_t g_buffer[];
+uint8_t g_buffer[]  = "placeholder text";
 uint8_t *gp_buffer = g_buffer;
 uint8_t g_send_char = 0;
 uint8_t g_char_in;
 uint8_t g_char_out;
 volatile int still_writing = 1;
 
-MSG_BUF* gp_cur_msg_buf = NULL;
+volatile MSG_BUF* gp_cur_msg_buf = NULL;
+MSG_BUF* gp_cur_char = NULL;
 int g_entering_kc = 0;
 
 extern uint32_t g_switch_flag;
@@ -37,6 +38,8 @@ int uart_irq_init(int n_uart) {
 	
 	
 	LPC_UART_TypeDef *pUart;
+	
+	//g_buffer =
 	
 	if ( n_uart ==0 ) {
 		/*
@@ -188,6 +191,7 @@ RESTORE
  */
 void c_UART0_IRQHandler(void)
 {
+	MSG_BUF* cur_char_msg;
 	uint8_t IIR_IntId;	    // Interrupt ID from IIR 		 
 	LPC_UART_TypeDef *pUart = (LPC_UART_TypeDef *)LPC_UART0;
 	
@@ -208,22 +212,35 @@ void c_UART0_IRQHandler(void)
 		g_buffer[12] = g_char_in; // nasty hack
 		g_send_char = 1;
 		
-		//write_to_CRT(&g_char_in);
+		//forward single character to kcd
+		cur_char_msg = (MSG_BUF*) k_request_memory_block();
+		cur_char_msg->mtype = CRT_DISPLAY;
+		cur_char_msg->mtext[0] = g_char_in;
+		if ('\n'  == g_char_in || '\r' == g_char_in) {
+			cur_char_msg->mtext[0] = '\n';
+			cur_char_msg->mtext[1] = '\r';
+			cur_char_msg->mtext[2] = '\0';
+		}
+		else {
+			cur_char_msg->mtext[1] = '\0';
+		}
+		k_send_message(PID_KCD, (void*) cur_char_msg);
 		
 		if (g_entering_kc) {
 			//add to msg_buf
 			//make sure you don't overflow the message buffer, could be like 100
 			gp_cur_msg_buf->mtext[g_entering_kc] = g_char_in;
 			if ('\n' == g_char_in || '\r' == g_char_in) {
-				gp_cur_msg_buf->mtext[g_entering_kc] = g_char_in;
-				send_message(PID_KCD, (void*) gp_cur_msg_buf);
-				g_entering_kc = 0;
+				gp_cur_msg_buf->mtext[g_entering_kc] = '\0';
+				k_send_message(PID_KCD, (void*) gp_cur_msg_buf);
+				g_entering_kc = -1;
 			}
+			g_entering_kc++;
 		}
 		else if (g_char_in == '%') {
 			//make msg_buf
-			gp_cur_msg_buf = (MSG_BUF*) request_memory_block();
-			//g_cur_msg_buf->mtype = 
+			gp_cur_msg_buf = (MSG_BUF*) k_request_memory_block();
+			gp_cur_msg_buf->mtype = DEFAULT;
 			gp_cur_msg_buf->mtext[g_entering_kc] = g_char_in;
 			g_entering_kc++;
 		}
