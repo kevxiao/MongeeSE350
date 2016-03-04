@@ -227,6 +227,13 @@ void c_UART0_IRQHandler(void)
 		
 		//forward single character to kcd
 		cur_char_msg = (MSG_BUF*) k_request_memory_block();
+		if (cur_char_msg == NULL){
+			#ifdef DEBUG_0
+				uart1_put_string("No moar memory to output character\n\r");
+			#endif // DEBUG_0
+			gp_current_process = orig_proc;
+			return;
+		}
 		cur_char_msg->mtype = CRT_DISPLAY;
 		cur_char_msg->mtext[0] = g_char_in;
 		if ('\n'  == g_char_in || '\r' == g_char_in) {
@@ -253,6 +260,13 @@ void c_UART0_IRQHandler(void)
 		else if (g_char_in == '%') {
 			//make msg_buf
 			gp_cur_msg_buf = (MSG_BUF*) k_request_memory_block();
+			if (gp_cur_msg_buf == NULL){
+				#ifdef DEBUG_0
+					uart1_put_string("No moar memory for command\n\r");
+				#endif // DEBUG_0
+				gp_current_process = orig_proc;
+				return;
+			}
 			gp_cur_msg_buf->mtype = DEFAULT;
 			gp_cur_msg_buf->mtext[g_entering_kc] = g_char_in;
 			g_entering_kc++;

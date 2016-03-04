@@ -62,36 +62,25 @@ void crtproc(void){
 }
 
 void set_command_id(int pid, char* identifier)  {
-	REG_COM_ID* prev;
 	REG_COM_ID* cur;
 	int i = 0;
 	
-	prev = NULL;
-	
-	cur = gp_reg_com_head;
-	
-	while (NULL != cur) {
-		if (cur->mpid == pid) {
-			break;
-		}
-		prev = cur;
-		cur = (REG_COM_ID*) cur->mp_next;
+	cur = (REG_COM_ID*) k_request_memory_block();
+	if (NULL == cur){
+		#ifdef DEBUG_0
+			uart1_put_string("No moar memory to register this command\n\r");
+		#endif // DEBUG_0
+		return;
 	}
-	if (NULL == cur) {
-		cur = (REG_COM_ID*) k_request_memory_block();
-	}
+	cur->mp_next = gp_reg_com_head;
+	gp_reg_com_head = cur;
 	
 	cur->mpid = pid;
-	cur->mp_next = NULL;
 	while ('\0' != identifier[i]) {
 		cur->mtext_id[i] = identifier[i];
 		i++;
 	}
 	cur->mtext_id[i] = '\0';
-	
-	if (NULL == prev) {
-		gp_reg_com_head = cur;
-	}
 }
 
 int get_pid_from_com_id(char* command) {
@@ -128,8 +117,10 @@ void kcdproc(void) {
 		//execute command
 		command_text = command_msg->mtext;
 		if (KCD_REG == command_msg->mtype) {
-			set_command_id(sender_id, command_text);
-			release_memory_block(command_msg);
+			if ('%' == command_text[0]) {
+				set_command_id(sender_id, command_text + 1);
+				release_memory_block(command_msg);
+			}
 		}
 		else if (CRT_DISPLAY == command_msg->mtype) {
 			send_message(PID_CRT, (void*) command_msg);

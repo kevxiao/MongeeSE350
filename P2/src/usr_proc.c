@@ -388,8 +388,9 @@ void proc_wall_clock(void) {
 	U32 clock_time = 0;
 	MSG_BUF* kcd_reg_msg = request_memory_block();
 	kcd_reg_msg->mtype = KCD_REG;
-	kcd_reg_msg->mtext[0] = 'W';
-	kcd_reg_msg->mtext[1] = '\0';
+	kcd_reg_msg->mtext[0] = '%';
+	kcd_reg_msg->mtext[1] = 'W';
+	kcd_reg_msg->mtext[2] = '\0';
 	send_message(PID_KCD, kcd_reg_msg);
 	self_msg->mtype = DEFAULT;
 	while (1) {

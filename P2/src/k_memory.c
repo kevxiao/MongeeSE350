@@ -142,6 +142,9 @@ void *k_request_memory_block(void) {
 		#ifdef DEBUG_0
 		printf("k_request_memory_block: no moar memory\n\r");
 		#endif /* ! DEBUG_0 */
+		if (gp_current_process->m_pid == PID_UART_IPROC || gp_current_process->m_pid == PID_TIMER_IPROC || gp_current_process->m_pid == PID_KCD){
+			return NULL;
+		}
 		gp_current_process->m_state = BLOCKED;
 		k_release_processor();
 	}
