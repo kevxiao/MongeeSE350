@@ -198,7 +198,7 @@ PCB *scheduler(void)
 		prev_pcb = NULL;
 		// find first unblocked process for priority i
 		while(cur_pcb != NULL){
-			if(cur_pcb->m_state != BLOCKED){
+			if(cur_pcb->m_state != BLOCKED && cur_pcb->m_state != BLOCKED_ON_RECEIVE){
 				if(prev_pcb != NULL){
 					prev_pcb->mp_next = cur_pcb->mp_next;
 					if (prev_pcb->mp_next == NULL) {
@@ -245,7 +245,7 @@ int process_switch(PCB *p_pcb_old)
 
 	if (state == NEW) {
 		if (gp_current_process != p_pcb_old && p_pcb_old->m_state != NEW) {
-			if (p_pcb_old->m_state != BLOCKED){
+			if (p_pcb_old->m_state != BLOCKED && p_pcb_old->m_state != BLOCKED_ON_RECEIVE){
 				p_pcb_old->m_state = RDY;
 			}
 			p_pcb_old->mp_sp = (U32 *) __get_MSP();
@@ -259,7 +259,7 @@ int process_switch(PCB *p_pcb_old)
 
 	if (gp_current_process != p_pcb_old) {
 		if (state == RDY){ 		
-			if (p_pcb_old->m_state != BLOCKED){
+			if (p_pcb_old->m_state != BLOCKED && p_pcb_old->m_state != BLOCKED_ON_RECEIVE){
 				p_pcb_old->m_state = RDY;
 			}
 			p_pcb_old->mp_sp = (U32 *) __get_MSP(); // save the old process's sp
@@ -340,7 +340,7 @@ int k_set_process_priority (int process_id, int priority)
 				}
 				gp_priority_end[priority] = cur_pcb;
 				
-				if ((priority < gp_current_process->m_priority || gp_current_process->m_pid == cur_pcb->m_pid) && cur_pcb->m_state != BLOCKED) {
+				if ((priority < gp_current_process->m_priority || gp_current_process->m_pid == cur_pcb->m_pid) && cur_pcb->m_state != BLOCKED && cur_pcb->m_state != BLOCKED_ON_RECEIVE) {
 					k_release_processor();
 				}
 				return RTX_OK;

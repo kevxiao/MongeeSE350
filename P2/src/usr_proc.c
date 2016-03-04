@@ -254,3 +254,42 @@ void proc5(void)
 		}
 	}
 }
+
+/**
+ * @brief: a process that sends a message to proc8.
+ */
+void proc7(void)
+{
+	MSG_BUF* message = request_memory_block();
+	char text[15] = "This is a test";
+	int i = 0;
+	while ( 1) {
+		while(text[i]!='\0'){
+			message->mtext[i] = text[i];
+			i++;
+		}
+		message->mtype = DEFAULT;
+		send_message(PID_P4 ,message);
+	}
+}
+
+/**
+ * @brief: a process that receives a message from proc7.
+ */
+void proc8(void)
+{
+	int i=0;
+	int* sender_id;
+	MSG_BUF* message = receive_message(sender_id);
+	while ( 1) {
+		#ifdef DEBUG_0
+			printf("Received the following message from process %d:\n\r", *sender_id);
+			while(message->mtext[i]!='\0'){
+				printf("%c", message->mtext[i]);
+				i++;
+			}
+		#endif
+		
+		release_memory_block(message);
+	}
+}
