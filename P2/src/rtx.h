@@ -53,3 +53,5 @@ extern int k_delayed_send(int, void *, int);
 #define delayed_send(pid, p_msg, delay) _delayed_send((U32)k_delayed_send, pid, p_msg, delay)
 extern int _delayed_send(U32 p_func, int pid, void *p_msg, int delay) __SVC_0;  
 #endif /* !RTX_H_ */
+
+extern void queue_debug_statement(int);

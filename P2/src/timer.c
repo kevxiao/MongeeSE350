@@ -90,7 +90,7 @@ uint32_t timer_init(uint8_t n_timer)
 
 	/* Step 4.5: Enable the TCR. See table 427 on pg494 of LPC17xx_UM. */
 	pTimer->TCR = 1;
-
+	
 	return 0;
 }
 
@@ -124,7 +124,7 @@ void c_TIMER0_IRQHandler(void)
 	while (gp_delayed_msgs != NULL && gp_delayed_msgs->m_send_time <= g_timer_count) {
 		temp = gp_delayed_msgs;
 		gp_delayed_msgs = gp_delayed_msgs->mp_next;
-		k_send_message(gp_delayed_msgs->m_recv_pid, (void*) temp);
+		k_send_message(temp->m_recv_pid, (void*) temp);
 	}
 }
 

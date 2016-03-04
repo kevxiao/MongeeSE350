@@ -247,13 +247,13 @@ void c_UART0_IRQHandler(void)
 		
 		#ifdef _DEBUG_HOTKEYS
 		if ('1' == g_char_in) {
-			queue_debug_statement(RDY);
+			queue_debug_statement(1);
 		}
 		else if ('2' == g_char_in) {
-			queue_debug_statement(BLOCKED);
+			queue_debug_statement(3);
 		}
 		else if ('3' == g_char_in) {
-			queue_debug_statement(BLOCKED_ON_RECEIVING);
+			queue_debug_statement(4);
 		}
 		#endif
 		
