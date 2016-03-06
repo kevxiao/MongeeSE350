@@ -119,8 +119,8 @@ void kcdproc(void) {
 		if (KCD_REG == command_msg->mtype) {
 			if ('%' == command_text[0]) {
 				set_command_id(sender_id, command_text + 1);
-				release_memory_block(command_msg);
 			}
+			release_memory_block(command_msg);
 		}
 		else if (CRT_DISPLAY == command_msg->mtype) {
 			send_message(PID_CRT, (void*) command_msg);

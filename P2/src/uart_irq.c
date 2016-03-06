@@ -225,6 +225,18 @@ void c_UART0_IRQHandler(void)
 		g_buffer[12] = g_char_in; // nasty hack
 		g_send_char = 1;
 		
+		#ifdef _DEBUG_HOTKEYS
+		if ('1' == g_char_in) {
+			queue_debug_statement(1);
+		}
+		else if ('2' == g_char_in) {
+			queue_debug_statement(3);
+		}
+		else if ('3' == g_char_in) {
+			queue_debug_statement(4);
+		}
+		#endif 
+		
 		//forward single character to kcd
 		cur_char_msg = (MSG_BUF*) k_request_memory_block();
 		if (cur_char_msg == NULL){
@@ -271,18 +283,6 @@ void c_UART0_IRQHandler(void)
 			gp_cur_msg_buf->mtext[g_entering_kc] = g_char_in;
 			g_entering_kc++;
 		}
-		
-		#ifdef _DEBUG_HOTKEYS
-		if ('1' == g_char_in) {
-			queue_debug_statement(1);
-		}
-		else if ('2' == g_char_in) {
-			queue_debug_statement(3);
-		}
-		else if ('3' == g_char_in) {
-			queue_debug_statement(4);
-		}
-		#endif
 		
 		/* setting the g_switch_flag */
 // 		if ( g_char_in == 'S' ) {
