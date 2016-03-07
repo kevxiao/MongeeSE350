@@ -73,7 +73,7 @@ typedef struct msgbuf
 	int m_send_pid;		/* sender pid */
 	int m_recv_pid;		/* receiver pid */
 	int m_send_time;	/* send time for delayed messages */
-	int m_kdata[5];		/* extra 20B kernel data place holder */
+	int m_kdata[4];		/* extra 20B kernel data place holder */
  #endif
 // #ifndef K_MSG_ENV
 // 	void *mp_nextYOULLNEVERUSETHISUPROC;		/* ptr to next message received*/

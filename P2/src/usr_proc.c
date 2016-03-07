@@ -444,8 +444,10 @@ void proc_wall_clock(void) {
 			command_text = incoming_msg->mtext;
 			if ('W' == command_text[1] && 'R' == command_text[2] && '\0' == command_text[3]) {
 				clock_time = 0;
+				if (0 == display_flag) {
+					delayed_send(PID_CLOCK, self_msg, 1000);
+				}
 				display_flag = 1;
-				delayed_send(PID_CLOCK, self_msg, 1000);
 			}
 			else if ('S' == command_text[2] && ' ' == command_text[3] && '\0' == command_text[12]) {
 				if (':' == command_text[6] && ':' == command_text[9]) {
@@ -461,8 +463,10 @@ void proc_wall_clock(void) {
 						}
 						else {
 							clock_time = numSeconds+60*(numMinutes+60*numHours);
+							if (0 == display_flag) {
+								delayed_send(PID_CLOCK, self_msg, 1000);
+							}
 							display_flag = 1;
-							delayed_send(PID_CLOCK, self_msg, 1000);
 						}
 							
 				}
