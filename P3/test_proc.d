@@ -1,0 +1,9 @@
+test_proc.o: src\test_proc.c
+test_proc.o: src\rtx.h
+test_proc.o: src\common.h
+test_proc.o: src\uart_polling.h
+test_proc.o: C:\Software\Keil\ARM\ARMCC\bin\..\include\stdint.h
+test_proc.o: src\uart_def.h
+test_proc.o: src\test_proc.h
+test_proc.o: src\printf.h
+test_proc.o: C:\Software\Keil\ARM\ARMCC\bin\..\include\stdarg.h

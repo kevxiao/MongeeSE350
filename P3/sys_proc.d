@@ -1,0 +1,10 @@
+sys_proc.o: src\sys_proc.c
+sys_proc.o: src\uart_polling.h
+sys_proc.o: C:\Software\Keil\ARM\ARMCC\bin\..\include\stdint.h
+sys_proc.o: src\uart_def.h
+sys_proc.o: src\uart.h
+sys_proc.o: src\sys_proc.h
+sys_proc.o: src\rtx.h
+sys_proc.o: src\common.h
+sys_proc.o: src\printf.h
+sys_proc.o: C:\Software\Keil\ARM\ARMCC\bin\..\include\stdarg.h

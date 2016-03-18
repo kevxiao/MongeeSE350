@@ -398,10 +398,10 @@ int k_send_message(int process_id, void *message_envelope) {
 		if (BLOCKED_ON_RECEIVE == receiving->m_state) {
 			receiving->m_state = RDY;
 			
-			if ((receiving->m_pid != PID_KCD && receiving->m_pid != PID_CRT && gp_current_process->m_priority >= receiving->m_priority) 
-						|| receiving->m_pid == PID_KCD || receiving->m_pid == PID_CRT){
-				k_release_processor();
-			}
+// 			if ((receiving->m_pid != PID_KCD && receiving->m_pid != PID_CRT && gp_current_process->m_priority >= receiving->m_priority) 
+// 						|| receiving->m_pid == PID_KCD || receiving->m_pid == PID_CRT){
+// 				k_release_processor();
+// 			}
 			//PUT INTO receiving process queue???
 		}
 		return RTX_OK;

@@ -1,0 +1,10 @@
+user_proc.o: src\user_proc.c
+user_proc.o: src\rtx.h
+user_proc.o: src\common.h
+user_proc.o: src\uart_polling.h
+user_proc.o: C:\Software\Keil\ARM\ARMCC\bin\..\include\stdint.h
+user_proc.o: src\uart_def.h
+user_proc.o: src\user_proc.h
+user_proc.o: src\str_util.h
+user_proc.o: src\printf.h
+user_proc.o: C:\Software\Keil\ARM\ARMCC\bin\..\include\stdarg.h
