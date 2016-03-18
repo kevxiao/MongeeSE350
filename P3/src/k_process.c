@@ -286,7 +286,12 @@ int k_set_process_priority (int process_id, int priority)
 	int i = 0;
 	PCB* cur_pcb = NULL;
 	PCB* prev_pcb = NULL;
-	if((process_id == PID_NULL && priority != 4)|| (process_id != PID_NULL && priority == 4)) {
+	if((process_id == PID_NULL && priority != 4)
+			|| (process_id != PID_NULL && priority == 4) 
+			|| PID_KCD == process_id
+			|| PID_CRT == process_id
+			|| PID_TIMER_IPROC == process_id
+			|| PID_UART_IPROC == process_id) {
 		return RTX_ERR;
 	}
 	for ( i = 0; i < NUM_PRIORITIES; ++i) {

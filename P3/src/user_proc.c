@@ -162,7 +162,7 @@ void proc_set_proc_priority(void) {
 				++i;
 			}
 			pid = str_to_int(incoming_msg->mtext+i);
-			while ('0' >= incoming_msg->mtext[i] && '9' <= incoming_msg->mtext[i]) {
+			while ('0' <= incoming_msg->mtext[i] && '9' >= incoming_msg->mtext[i]) {
 				++i;
 			}
 			if (' ' == incoming_msg->mtext[i]) {
@@ -170,7 +170,7 @@ void proc_set_proc_priority(void) {
 					++i;
 				}
 				prio = str_to_int(incoming_msg->mtext+i);
-				while ('0' >= incoming_msg->mtext[i] && '9' <= incoming_msg->mtext[i]) {
+				while ('0' <= incoming_msg->mtext[i] && '9' >= incoming_msg->mtext[i]) {
 					++i;
 				}
 				if (' ' == incoming_msg->mtext[i] || '\0' == incoming_msg->mtext[i]) {
@@ -190,6 +190,7 @@ void procA(void) {
 	MSG_BUF* kcd_reg_msg = (MSG_BUF*) request_memory_block();
 	kcd_reg_msg->mtype = KCD_REG;
 	str_copy(com, kcd_reg_msg->mtext);
+	send_message(PID_KCD, kcd_reg_msg);
 	while(1) {
 		msg = (MSG_BUF*) receive_message(&sender_id);
 		if ('%' == msg->mtext[0] && 'Z' == msg->mtext[1]) {
@@ -231,7 +232,7 @@ void procB(void) {
 }
 
 void procC(void) {
-	char output[10] = "Process C";
+	char output[12] = "Process C\n\r";
 	MSG_LOCAL* q_local_head = NULL;
 	MSG_LOCAL* q_local_tail = NULL;
 	MSG_LOCAL* temp;

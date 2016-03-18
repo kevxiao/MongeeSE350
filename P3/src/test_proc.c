@@ -233,8 +233,10 @@ void proc6(void){
 	set_process_priority(6, HIGH);
 	set_process_priority(PID_CLOCK, HIGH);
 	set_process_priority(5,HIGH);
-	
-	
+	set_process_priority(PID_A, MEDIUM);
+	set_process_priority(PID_B, MEDIUM);
+	set_process_priority(PID_C, HIGH);
+	set_process_priority(6, MEDIUM);
 	
 	while (1) {
 		release_processor();
