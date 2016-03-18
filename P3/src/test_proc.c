@@ -9,6 +9,7 @@
 #include "rtx.h"
 #include "uart_polling.h"
 #include "test_proc.h"
+#include "str_util.h"
 
 #ifdef DEBUG_0
 #include "printf.h"
@@ -45,198 +46,120 @@ void set_test_procs() {
 	g_test_procs[3].mpf_start_pc = &proc4;
 	g_test_procs[4].mpf_start_pc = &proc5;
 	g_test_procs[5].mpf_start_pc = &proc6;
-	g_test_procs[5].m_priority = HIGH;
+	g_test_procs[5].m_priority = MEDIUM;
 }
 
 void proc6(void){
 	int passed = 0;
 	int failed = 0;
 	int total = 0;
-	int equalText=0;
 	MSG_BUF* message;
-	int i=0;
 	char* startTestText = "G008_test: START\n\rG008_test: total 3 tests\n\r";
 	char* passTestText = "G008_test: test x OK\n\r";	//replace 16 for test
 	char* failTestText = "G008_test: test x FAIL\n\r";	//replace 16 for test
 	char* endTestText = "G008_test: p/t tests OK\n\rG008_test: f/t tests FAIL\n\rG008_test: END\n\r"; //p at 11, t at 13, f at 36, t at 38 
 	
 	message = request_memory_block();
-	i = 0;
-	while(startTestText[i] !='\0'){
-		message->mtext[i] = startTestText[i];
-		i++;
-	}
-	message->mtext[i] = startTestText[i];
+	str_copy(startTestText, message->mtext);
 	message->mtype = CRT_DISPLAY;
 	send_message(PID_CRT , message);
 	
-	set_process_priority(1, LOW);
-	set_process_priority(2, LOW);
-	set_process_priority(3, LOW);
-	set_process_priority(4, LOW);
-	set_process_priority(5, LOW);
+	set_process_priority(PID_P1, LOWEST);
+	set_process_priority(PID_P2, LOWEST);
+	set_process_priority(PID_P3, LOWEST);
+	set_process_priority(PID_P4, LOWEST);
+	set_process_priority(PID_P5, LOWEST);
 	
-	/*//TEST 1
-	set_process_priority(4, MEDIUM);
-	set_process_priority(5, MEDIUM);
-	set_process_priority(6, LOWEST);
-	release_processor();
-	
-	locMemoryAllocated = memoryAllocated;
-	
-	set_process_priority(4, LOW);
-	set_process_priority(5, LOW);*/
-	
-	//set_process_priority(3, HIGH);
-	
-	set_process_priority(2, MEDIUM);
-	set_process_priority(3, MEDIUM);
-	set_process_priority(6, LOWEST);
+	//send-receive test
+	set_process_priority(PID_P2, MEDIUM);
+	set_process_priority(PID_P3, MEDIUM);
+	set_process_priority(PID_P6, LOW);
 	total++;
 	
-	while(textReceived[equalText] !=  '\0'){
-		if(textReceived[equalText] != text[equalText]){
-			failed++;
-			failTestText[16] = '1';
-			message = request_memory_block();
-			i = 0;
-			while(failTestText[i] !='\0'){
-				message->mtext[i] = failTestText[i];
-				i++;
-			}
-			message->mtext[i] = failTestText[i];
-			message->mtype = CRT_DISPLAY;
-			send_message(PID_CRT , message);
-			break;
-		}
-	}
-	
-	if(textReceived[equalText] ==  '\0'){
+	if (str_compare(text, textReceived)) {
 		passed++;
 		passTestText[16] = '1';
 		message = request_memory_block();
-		i = 0;
-		while(passTestText[i] !='\0'){
-			message->mtext[i] = passTestText[i];
-			i++;
-		}
-		message->mtext[i] = passTestText[i];
+		str_copy(passTestText, message->mtext);
 		message->mtype = CRT_DISPLAY;
 		send_message(PID_CRT , message);
-		
+	} else {
+		failed++;
+		failTestText[16] = '1';
+		message = request_memory_block();
+		str_copy(failTestText, message->mtext);
+		message->mtype = CRT_DISPLAY;
+		send_message(PID_CRT , message);
 	}
 	
-	set_process_priority(1, LOW);
-	set_process_priority(2, LOW);
-	set_process_priority(3, LOW);
-	set_process_priority(4, LOW);
-	set_process_priority(5, LOW);
+	set_process_priority(PID_P2, LOWEST);
+	set_process_priority(PID_P3, LOWEST);
 	
 	//delayed test
-	set_process_priority(1, HIGH);
-	set_process_priority(6, MEDIUM);
+	set_process_priority(PID_P1, MEDIUM);
+	set_process_priority(PID_P6, LOW);
 	total++;
 	
 	while(isDelayed){
 		release_processor();
 	}
 	
-	
 	if(difference5000 == 5000){
 		passed++;
 		passTestText[16] = '2';
 		message = request_memory_block();
-		i = 0;
-		while(passTestText[i] !='\0'){
-			message->mtext[i] = passTestText[i];
-			i++;
-		}
-		message->mtext[i] = passTestText[i];
+		str_copy(passTestText, message->mtext);
 		message->mtype = CRT_DISPLAY;
 		send_message(PID_CRT , message);
-		
-	}else{
+	} else {
 		failed++;
 		failTestText[16] = '2';
 		message = request_memory_block();
-		i = 0;
-		while(failTestText[i] !='\0'){
-			message->mtext[i] = failTestText[i];
-			i++;
-		}
-		message->mtext[i] = failTestText[i];
+		str_copy(failTestText, message->mtext);
 		message->mtype = CRT_DISPLAY;
 		send_message(PID_CRT , message);
-		
 	}
 	
-	set_process_priority(1, LOW);
-	set_process_priority(2, LOW);
-	set_process_priority(3, LOW);
-	set_process_priority(4, LOW);
-	set_process_priority(5, LOW);
+	set_process_priority(PID_P1, LOWEST);	
 	
-	
-	set_process_priority(4, HIGH);
-	set_process_priority(6, MEDIUM);
+	//something test
+	set_process_priority(PID_P4, MEDIUM);
+	set_process_priority(PID_P6, LOW);
 	total++;
 	
 	if(shouldNotRun != 1){
 		passed++;
 		passTestText[16] = '3';
 		message = request_memory_block();
-		i = 0;
-		while(passTestText[i] !='\0'){
-			message->mtext[i] = passTestText[i];
-			i++;
-		}
-		message->mtext[i] = passTestText[i];
+		str_copy(passTestText, message->mtext);
 		message->mtype = CRT_DISPLAY;
 		send_message(PID_CRT , message);
-		
-	}else{
+	} else {
 		failed++;
 		failTestText[16] = '3';
 		message = request_memory_block();
-		i = 0;
-		while(failTestText[i] !='\0'){
-			message->mtext[i] = failTestText[i];
-			i++;
-		}
-		message->mtext[i] = failTestText[i];
+		str_copy(failTestText, message->mtext);
 		message->mtype = CRT_DISPLAY;
 		send_message(PID_CRT , message);
-		
 	}
-	
-	set_process_priority(1, LOW);
-	set_process_priority(2, LOW);
-	set_process_priority(3, LOW);
-	set_process_priority(4, LOW);
-	set_process_priority(5, LOW);
-	
+
+	set_process_priority(PID_P4, LOWEST);
 	
 	endTestText[11] = '0'+passed;
 	endTestText[13] = '0'+total;
 	endTestText[36] = '0'+failed;
 	endTestText[38] = '0'+total;
 	message = request_memory_block();
-	i = 0;
-	while(endTestText[i] !='\0'){
-		message->mtext[i] = endTestText[i];
-		i++;
-	}
-	message->mtext[i] = endTestText[i];
+	str_copy(endTestText, message->mtext);
 	message->mtype = CRT_DISPLAY;
 	send_message(PID_CRT , message);
 	
-	set_process_priority(6, HIGH);
-	set_process_priority(PID_CLOCK, HIGH);
-	set_process_priority(5,HIGH);
-	set_process_priority(PID_A, MEDIUM);
-	set_process_priority(PID_B, MEDIUM);
-	set_process_priority(PID_C, HIGH);
-	set_process_priority(6, MEDIUM);
+	set_process_priority(PID_CLOCK, MEDIUM);
+	set_process_priority(PID_P5, MEDIUM);
+	set_process_priority(PID_A, LOW);
+	set_process_priority(PID_B, LOW);
+	set_process_priority(PID_C, MEDIUM);
+	set_process_priority(PID_P6, LOW);
 	
 	while (1) {
 		release_processor();
@@ -279,25 +202,26 @@ void proc1(void) {
 			i++;
 		}
 		release_memory_block(received_message);
-		set_process_priority(6, HIGH);
+		set_process_priority(PID_P6, MEDIUM);
 		release_processor();
 	}
 }
 
 void proc2(void) {
 	MSG_BUF* message;
-	int i = 0;
+// 	int i = 0;
 	while ( 1) {
 		message = request_memory_block();
-		i=0;
-		while(text[i]!='\0'){
-			message->mtext[i] = text[i];
-			i++;
-		}
-		message->mtext[i] = text[i];
+		//i=0;
+		str_copy(text, message->mtext);
+// 		while(text[i]!='\0'){
+// 			message->mtext[i] = text[i];
+// 			i++;
+// 		}
+// 		message->mtext[i] = text[i];
 		message->mtype = DEFAULT;
 		send_message(PID_P3 ,message);
-		set_process_priority(PID_P2, LOW);
+		set_process_priority(PID_P2, LOWEST);
 		release_processor();
 	}
 }
@@ -305,8 +229,8 @@ void proc2(void) {
 void proc3(void) {
 	int i=0;
 	int sender_id;
-	MSG_BUF* message = receive_message(&sender_id);
 	while ( 1) {
+		MSG_BUF* message = receive_message(&sender_id);
 		#ifdef DEBUG_0
 			printf("Received the following message from process %d:\n\r", sender_id);
 			while(message->mtext[i]!='\0'){
@@ -315,13 +239,14 @@ void proc3(void) {
 			}
 			printf("\n\r");
 		#endif
-		while(message->mtext[i]!='\0'){
-			textReceived[i] = message->mtext[i];
-			i++;
-		}
-		textReceived[i] = message->mtext[i];
+		str_copy(message->mtext, textReceived);
+// 		while(message->mtext[i]!='\0'){
+// 			textReceived[i] = message->mtext[i];
+// 			i++;
+// 		}
+// 		textReceived[i] = message->mtext[i];
 		release_memory_block(message);
-		set_process_priority(6, HIGH);
+		set_process_priority(PID_P6, MEDIUM);
 	}
 }
 
@@ -333,18 +258,21 @@ void proc4(void) {
 	}
 }
 
+//could use more str_copy
 void proc5(void) {
 	int sender_id;
 	MSG_BUF* incoming_msg;
 	MSG_BUF* action_msg;
+	char com[3] = "%R";
 	MSG_BUF* kcd_reg_msg = request_memory_block();
 	int i;
 	int j;
 	char dtext[40] = "Proc 5 says this is a command.\n\r";
 	kcd_reg_msg->mtype = KCD_REG;
-	kcd_reg_msg->mtext[0] = '%';
-	kcd_reg_msg->mtext[1] = 'R';
-	kcd_reg_msg->mtext[2] = '\0';
+	str_copy(com, kcd_reg_msg->mtext);
+// 	kcd_reg_msg->mtext[0] = '%';
+// 	kcd_reg_msg->mtext[1] = 'R';
+// 	kcd_reg_msg->mtext[2] = '\0';
 	send_message(PID_KCD, kcd_reg_msg);
 	while (1) {
 		incoming_msg = (MSG_BUF*) receive_message(&sender_id);

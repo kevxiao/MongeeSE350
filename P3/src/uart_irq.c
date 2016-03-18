@@ -9,6 +9,7 @@
 #include "uart.h"
 #include "uart_polling.h"
 #include "rtx.h"
+#include "str_util.h"
 #ifdef DEBUG_0
 #include "printf.h"
 #endif
@@ -205,6 +206,7 @@ void c_UART0_IRQHandler(void)
 	uint8_t IIR_IntId;	    // Interrupt ID from IIR 		 
 	LPC_UART_TypeDef *pUart = (LPC_UART_TypeDef *)LPC_UART0;
 	PCB* orig_proc = gp_current_process;
+	char endline[3] = "\n\r";
 	
 	gp_current_process = gp_uart_pcb;
 	
@@ -227,13 +229,13 @@ void c_UART0_IRQHandler(void)
 		
 		#ifdef _DEBUG_HOTKEYS
 		if ('1' == g_char_in) {
-			queue_debug_statement(1);
+			queue_debug_statement(RDY);
 		}
 		else if ('2' == g_char_in) {
-			queue_debug_statement(3);
+			queue_debug_statement(BLOCKED);
 		}
 		else if ('3' == g_char_in) {
-			queue_debug_statement(4);
+			queue_debug_statement(BLOCKED_ON_RECEIVE);
 		}
 		#endif 
 		
@@ -249,9 +251,10 @@ void c_UART0_IRQHandler(void)
 		cur_char_msg->mtype = CRT_DISPLAY;
 		cur_char_msg->mtext[0] = g_char_in;
 		if ('\n'  == g_char_in || '\r' == g_char_in) {
-			cur_char_msg->mtext[0] = '\n';
-			cur_char_msg->mtext[1] = '\r';
-			cur_char_msg->mtext[2] = '\0';
+			str_copy(endline, cur_char_msg->mtext);
+// 			cur_char_msg->mtext[0] = '\n';
+// 			cur_char_msg->mtext[1] = '\r';
+// 			cur_char_msg->mtext[2] = '\0';
 		}
 		else {
 			cur_char_msg->mtext[1] = '\0';
