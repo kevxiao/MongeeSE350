@@ -19,8 +19,8 @@
 extern unsigned int Image$$RW_IRAM1$$ZI$$Limit; 
 extern PCB **gp_pcbs;
 extern PROC_INIT g_proc_table[NUM_TEST_PROCS];
-extern PCB* gp_priority_begin[NUM_PRIORITIES];
-extern PCB* gp_priority_end[NUM_PRIORITIES];
+extern PCB* gp_blocked_priority_begin[NUM_PRIORITIES];
+extern PCB* gp_blocked_priority_end[NUM_PRIORITIES];
 
 /* ----- Functions ------ */
 void memory_init(void);

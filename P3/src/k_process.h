@@ -26,6 +26,8 @@ int k_get_process_priority(int);
 int k_send_message(int, void*);
 void* k_receive_message(int*);
 int k_delayed_send(int, void*, int);
+void k_change_process_state(PCB*, PROC_STATE_E);
+PCB* k_get_PCB (int);
 
 extern int k_release_memory_block(void *);
 extern U32 *alloc_stack(U32 size_b);   /* allocate stack for a process */

@@ -15,7 +15,7 @@ REG_COM_ID* gp_reg_com_head = NULL;
 void set_sys_procs() {
 	int i;
 	for( i = 0; i < NUM_SYS_PROCS; i++ ) {
-		g_sys_procs[i].m_priority=5;
+		g_sys_procs[i].m_priority=0;
 		g_sys_procs[i].m_stack_size=0x100;
 	}
 	g_sys_procs[0].m_priority = 4;

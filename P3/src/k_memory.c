@@ -145,8 +145,7 @@ void *k_request_memory_block(void) {
 		if (gp_current_process->m_pid == PID_UART_IPROC || gp_current_process->m_pid == PID_TIMER_IPROC || gp_current_process->m_pid == PID_KCD){
 			return NULL;
 		}
-		gp_current_process->m_state = BLOCKED;
-		k_release_processor();
+		k_change_process_state(gp_current_process, BLOCKED);
 	}
 // 	while(blocks_in_use[i] != NULL && i < numBlocks){
 // 		if (i >= numBlocks){
@@ -163,7 +162,6 @@ void *k_request_memory_block(void) {
 int k_release_memory_block(void *p_mem_blk) {
 	mem_blk* temp = (mem_blk*) p_mem_blk;
 	int i;
-	int will_release = 0;
 	//int found = 0;
 	PCB* cur_pcb = NULL;
 // 	if (p_mem_blk == NULL){
@@ -185,20 +183,11 @@ int k_release_memory_block(void *p_mem_blk) {
 	temp->next_blk = (U32*) p_heap_head;
 	p_heap_head = temp;
 	for (i=0; i < NUM_PRIORITIES; i++){
-		cur_pcb = gp_priority_begin[i];
-		while(cur_pcb != NULL){
-			if(cur_pcb->m_state == BLOCKED) {
-				if(i <= gp_current_process->m_priority){
-					will_release++;
-				}
-				cur_pcb->m_state = RDY;
-				//return RTX_OK;
-			}
-			cur_pcb = cur_pcb->mp_next;
+		cur_pcb = gp_blocked_priority_begin[i];
+		if(cur_pcb != NULL){
+			k_change_process_state(cur_pcb, RDY);
+			break;
 		}
-	}
-	if (will_release > 0){
-		k_release_processor();
 	}
 	return RTX_OK;
 }

@@ -45,8 +45,10 @@ extern PROC_INIT g_irq_procs[NUM_IRQ_PROCS];
 
 PCB* gp_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 PCB* gp_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
-PCB* gp_sys_procs_begin = NULL;
-PCB* gp_sys_procs_end = NULL;
+PCB* gp_blocked_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
+PCB* gp_blocked_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
+PCB* gp_bor_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
+PCB* gp_bor_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 
 extern uint32_t g_timer_count;
 
@@ -109,14 +111,7 @@ void process_init()
 		
 		// set priority and put into correct list
 		(gp_pcbs[i])->mp_next = NULL;
-		if ((gp_pcbs[i])->m_priority == 5) {
-			if (gp_sys_procs_end != NULL) {
-				gp_sys_procs_end->mp_next = (gp_pcbs[i]);
-			} else {
-				gp_sys_procs_begin = (gp_pcbs[i]);
-			}
-			gp_sys_procs_end = (gp_pcbs[i]);
-		} else if((gp_pcbs[i])->m_priority <= 4){
+		if((gp_pcbs[i])->m_priority <= 4){
 			if (gp_priority_end[(gp_pcbs[i])->m_priority] != NULL) {
 				gp_priority_end[(gp_pcbs[i])->m_priority]->mp_next = (gp_pcbs[i]);
 			} else {
@@ -137,71 +132,27 @@ void process_init()
 PCB *scheduler(void)
 {
 	PCB* cur_pcb = NULL;
-	PCB* prev_pcb = NULL;
 	int i;
-	// go through priorities in order and find the first unblocked process
 	
-	cur_pcb = gp_sys_procs_begin;
-	while(cur_pcb != NULL){
-		if(cur_pcb->m_state != BLOCKED && cur_pcb->m_state != BLOCKED_ON_RECEIVE){
-			if(prev_pcb != NULL){
-				prev_pcb->mp_next = cur_pcb->mp_next;
-				if (prev_pcb->mp_next == NULL) {
-					gp_sys_procs_end = prev_pcb;
-				}
-			}else{
-				gp_sys_procs_begin = cur_pcb->mp_next;
-				if(gp_sys_procs_begin == NULL){
-					gp_sys_procs_end = NULL;
-				}
+		// go through priorities in order and find the first unblocked process
+	for(i=0;i<NUM_PRIORITIES;++i){
+		cur_pcb = gp_priority_begin[i];
+		// find first unblocked process for priority i
+		if (cur_pcb != NULL) {
+			gp_priority_begin[i] = cur_pcb->mp_next;
+			if(gp_priority_begin[i] == NULL){
+				gp_priority_end[i] = NULL;
 			}
 			cur_pcb->mp_next = NULL;
 			
-			if(gp_sys_procs_end != NULL){
-				gp_sys_procs_end->mp_next = cur_pcb;
+			if(gp_priority_end[i] != NULL){
+				gp_priority_end[i]->mp_next = cur_pcb;
 			}else{
-				gp_sys_procs_begin = cur_pcb;
+				gp_priority_begin[i] = cur_pcb;
 			}
-			gp_sys_procs_end = cur_pcb;
+			gp_priority_end[i] = cur_pcb;
 
 			return cur_pcb;
-		}
-		
-		prev_pcb = cur_pcb;
-		cur_pcb = cur_pcb->mp_next;
-	}
-	
-	for(i=0;i<NUM_PRIORITIES;++i){
-		cur_pcb = gp_priority_begin[i];
-		prev_pcb = NULL;
-		// find first unblocked process for priority i
-		while(cur_pcb != NULL){
-			if(cur_pcb->m_state != BLOCKED && cur_pcb->m_state != BLOCKED_ON_RECEIVE){
-				if(prev_pcb != NULL){
-					prev_pcb->mp_next = cur_pcb->mp_next;
-					if (prev_pcb->mp_next == NULL) {
-						gp_priority_end[i] = prev_pcb;
-					}
-				}else{
-					gp_priority_begin[i] = cur_pcb->mp_next;
-					if(gp_priority_begin[i] == NULL){
-						gp_priority_end[i] = NULL;
-					}
-				}
-				cur_pcb->mp_next = NULL;
-				
-				if(gp_priority_end[i] != NULL){
-					gp_priority_end[i]->mp_next = cur_pcb;
-				}else{
-					gp_priority_begin[i] = cur_pcb;
-				}
-				gp_priority_end[i] = cur_pcb;
-
-				return cur_pcb;
-			}
-			
-			prev_pcb = cur_pcb;
-			cur_pcb = cur_pcb->mp_next;
 		}
 	}
 	return NULL;	
@@ -283,53 +234,67 @@ int k_release_processor(void)
  */
 int k_set_process_priority (int process_id, int priority)
 {
-	int i = 0;
+	int i = 0, j = 0;
 	PCB* cur_pcb = NULL;
 	PCB* prev_pcb = NULL;
+	PCB** list_begin;
+	PCB** list_end;
 	if((process_id == PID_NULL && priority != 4)
 			|| (process_id != PID_NULL && priority == 4) 
-			|| PID_KCD == process_id
-			|| PID_CRT == process_id
 			|| PID_TIMER_IPROC == process_id
-			|| PID_UART_IPROC == process_id) {
+			|| PID_UART_IPROC == process_id
+			|| priority < 0
+			|| priority > 4) {
 		return RTX_ERR;
 	}
-	for ( i = 0; i < NUM_PRIORITIES; ++i) {
-		cur_pcb = gp_priority_begin[i];
-		prev_pcb = NULL;
-		while (cur_pcb != NULL) {
-			if (cur_pcb->m_pid == process_id) {
-				if(cur_pcb->m_priority == priority) {
+	for(j = 0; j < 3; ++j) {
+		if(0 == j) {
+			list_begin = gp_priority_begin;
+			list_end = gp_priority_end;
+		} else if(1 == j) {
+			list_begin = gp_blocked_priority_begin;
+			list_end = gp_blocked_priority_end;
+		} else if(2 == j) {
+			list_begin = gp_bor_priority_begin;
+			list_end = gp_bor_priority_end;
+		} 
+		for ( i = 0; i < NUM_PRIORITIES; ++i) {
+			cur_pcb = list_begin[i];
+			prev_pcb = NULL;
+			while (cur_pcb != NULL) {
+				if (cur_pcb->m_pid == process_id) {
+					if(cur_pcb->m_priority == priority) {
+						return RTX_OK;
+					}
+					cur_pcb->m_priority = priority;
+					if(prev_pcb != NULL){
+						prev_pcb->mp_next = cur_pcb->mp_next;
+						if (list_end[i] == cur_pcb) {
+							list_end[i] = prev_pcb;
+						}
+					}else{
+						list_begin[i] = cur_pcb->mp_next;
+						if(list_begin[i] == NULL){
+							list_end[i] = NULL;
+						}
+					}
+					cur_pcb->mp_next = NULL;
+					
+					if(list_end[priority] != NULL){
+						list_end[priority]->mp_next = cur_pcb;
+					}else{
+						list_begin[priority] = cur_pcb;
+					}
+					list_end[priority] = cur_pcb;
+					
+					if ((priority < gp_current_process->m_priority || gp_current_process->m_pid == cur_pcb->m_pid) && cur_pcb->m_state != BLOCKED && cur_pcb->m_state != BLOCKED_ON_RECEIVE) {
+						k_release_processor();
+					}
 					return RTX_OK;
 				}
-				cur_pcb->m_priority = priority;
-				if(prev_pcb != NULL){
-					prev_pcb->mp_next = cur_pcb->mp_next;
-					if (gp_priority_end[i] == cur_pcb) {
-						gp_priority_end[i] = prev_pcb;
-					}
-				}else{
-					gp_priority_begin[i] = cur_pcb->mp_next;
-					if(gp_priority_begin[i] == NULL){
-						gp_priority_end[i] = NULL;
-					}
-				}
-				cur_pcb->mp_next = NULL;
-				
-				if(gp_priority_end[priority] != NULL){
-					gp_priority_end[priority]->mp_next = cur_pcb;
-				}else{
-					gp_priority_begin[priority] = cur_pcb;
-				}
-				gp_priority_end[priority] = cur_pcb;
-				
-				if ((priority < gp_current_process->m_priority || gp_current_process->m_pid == cur_pcb->m_pid) && cur_pcb->m_state != BLOCKED && cur_pcb->m_state != BLOCKED_ON_RECEIVE) {
-					k_release_processor();
-				}
-				return RTX_OK;
+				prev_pcb = cur_pcb;
+				cur_pcb = cur_pcb->mp_next;
 			}
-			prev_pcb = cur_pcb;
-			cur_pcb = cur_pcb->mp_next;
 		}
 	}
 	return RTX_ERR;
@@ -342,38 +307,34 @@ int k_set_process_priority (int process_id, int priority)
  */
 int k_get_process_priority (int process_id)
 {
-	int i = 0;
-	PCB* cur_pcb = NULL;
-	for ( i = 0; i < NUM_PRIORITIES; ++i) {
-		cur_pcb = gp_priority_begin[i];
-		while (cur_pcb != NULL) {
-			if (cur_pcb->m_pid == process_id) {
-				return cur_pcb->m_priority;
-			}
-			cur_pcb = cur_pcb->mp_next;
-		}
+	PCB* pcb = k_get_PCB(process_id);
+	if(pcb != NULL) {
+		return pcb->m_priority;
 	}
 	return RTX_ERR;
 }
 
-/*int k_get_current_process_id(){
-	if(gp_current_process == NULL){
-		return -1;
-	}
-	return gp_current_process->m_pid;
-}*/
-
-PCB* get_PCB (int process_id)
+PCB* k_get_PCB (int process_id)
 {
-	int i = 0;
+	int i = 0, j = 0;
 	PCB* cur_pcb = NULL;
-	for ( i = 0; i < NUM_PRIORITIES; ++i) {
-		cur_pcb = gp_priority_begin[i];
-		while (cur_pcb != NULL) {
-			if (cur_pcb->m_pid == process_id) {
-				return cur_pcb;
+	PCB** list_begin;
+	for(j = 0; j < 3; ++j) {
+		if(0 == j) {
+			list_begin = gp_priority_begin;
+		} else if(1 == j) {
+			list_begin = gp_blocked_priority_begin;
+		} else if(2 == j) {
+			list_begin = gp_bor_priority_begin;
+		} 
+		for ( i = 0; i < NUM_PRIORITIES; ++i) {
+			cur_pcb = list_begin[i];
+			while (cur_pcb != NULL) {
+				if (cur_pcb->m_pid == process_id) {
+					return cur_pcb;
+				}
+				cur_pcb = cur_pcb->mp_next;
 			}
-			cur_pcb = cur_pcb->mp_next;
 		}
 	}
 	return NULL;
@@ -401,13 +362,7 @@ int k_send_message(int process_id, void *message_envelope) {
 			receiving->mp_last_msg = new_node;
 		}
 		if (BLOCKED_ON_RECEIVE == receiving->m_state) {
-			receiving->m_state = RDY;
-			
-// 			if ((receiving->m_pid != PID_KCD && receiving->m_pid != PID_CRT && gp_current_process->m_priority >= receiving->m_priority) 
-// 						|| receiving->m_pid == PID_KCD || receiving->m_pid == PID_CRT){
-// 				k_release_processor();
-// 			}
-			//PUT INTO receiving process queue???
+			k_change_process_state(receiving, RDY);
 		}
 		return RTX_OK;
 	}
@@ -419,8 +374,7 @@ void* k_receive_message(int *sender_id) {
 	void* temp;
 	//atomic(on) ???
 	while (gp_current_process->mp_first_msg == NULL) {
-		gp_current_process->m_state = BLOCKED_ON_RECEIVE;
-		k_release_processor();
+		k_change_process_state(gp_current_process, BLOCKED_ON_RECEIVE);
 	}
 	temp = (void*) gp_current_process->mp_first_msg;
 	*sender_id = gp_current_process->mp_first_msg->m_send_pid;
@@ -464,28 +418,104 @@ int k_delayed_send(int process_id, void *message_envelope, int delay) {
 void queue_debug_statement(PROC_STATE_E state) {
 	int i = 0;
 	PCB* cur_pcb = NULL;
+	PCB** list_begin;
 	printf("State ");
 	if(state == RDY) {
 		printf("READY");
+		list_begin = gp_priority_begin;
 	} else if(state == BLOCKED) {
 		printf("BLOCKED");
+		list_begin = gp_blocked_priority_begin;
 	} else if(state == BLOCKED_ON_RECEIVE) {
-		printf("BLOCKED OF RECEIVE");
-	} else {
-		printf("UNKNOWN");
+		printf("BLOCKED ON RECEIVE");
+		list_begin = gp_bor_priority_begin;
 	}
 	printf(":\n\r");
 	for ( i = 0; i < NUM_PRIORITIES; ++i) {
 		printf("    Priority %d: ", i);
-		cur_pcb = gp_priority_begin[i];
+		cur_pcb = list_begin[i];
 		while (cur_pcb != NULL) {
-			if (cur_pcb->m_state == state /*|| (state == RDY && cur_pcb->m_state == NEW)*/) {
-				#ifdef DEBUG_0
-				printf(" %u", cur_pcb->m_pid );
-				#endif
-			}
+			#ifdef DEBUG_0
+			printf(" %u", cur_pcb->m_pid );
+			#endif
 			cur_pcb = cur_pcb->mp_next;
 		}
 		printf("\n\r");
+	}
+}
+
+
+void k_change_process_state(PCB* process, PROC_STATE_E newState){
+	
+	PCB** list_begin;
+	PCB** list_end;
+	PCB* cur_pcb = NULL;
+	PCB* prev_pcb = NULL;
+	
+	if(process->m_state == newState){
+		return;
+	}
+	
+	if(process->m_state == RDY || process->m_state == RUN || process->m_state == NEW) {
+		list_begin = gp_priority_begin;
+		list_end = gp_priority_end;
+	} else if(process->m_state == BLOCKED) {
+		list_begin = gp_blocked_priority_begin;
+		list_end = gp_blocked_priority_end;
+	} else if(process->m_state == BLOCKED_ON_RECEIVE) {
+		list_begin = gp_bor_priority_begin;
+		list_end = gp_bor_priority_end;
+	}
+	
+	//remove from previous queue
+	cur_pcb = list_begin[process->m_priority];
+	while(cur_pcb != NULL){
+		if(cur_pcb->m_pid == process->m_pid){
+			if(prev_pcb != NULL){
+				prev_pcb->mp_next = cur_pcb->mp_next;
+				if (prev_pcb->mp_next == NULL) {
+					list_end[process->m_priority] = prev_pcb;
+				}
+			}else{
+				list_begin[process->m_priority] = cur_pcb->mp_next;
+				if(list_begin[process->m_priority] == NULL){
+					list_end[process->m_priority] = NULL;
+				}
+			}
+			cur_pcb->mp_next = NULL;
+
+			break;
+		}
+		
+		prev_pcb = cur_pcb;
+		cur_pcb = cur_pcb->mp_next;
+	}
+	
+	
+	//set to new state
+	process->m_state = newState;
+	
+	if(process->m_state == RDY){
+		list_begin = gp_priority_begin;
+		list_end = gp_priority_end;
+	} else if(process->m_state == BLOCKED) {
+		list_begin = gp_blocked_priority_begin;
+		list_end = gp_blocked_priority_end;
+	} else if(process->m_state == BLOCKED_ON_RECEIVE) {
+		list_begin = gp_bor_priority_begin;
+		list_end = gp_bor_priority_end;
+	} 
+	
+	//insert process into new state
+	if(list_begin[process->m_priority] == NULL){
+		list_begin[process->m_priority] = process;
+		list_end[process->m_priority] = process;
+	}else{
+		list_end[process->m_priority]->mp_next = process;
+		list_end[process->m_priority] = process;
+	}
+	
+	if((process->m_pid == gp_current_process->m_pid && (newState == BLOCKED || newState == BLOCKED_ON_RECEIVE)) || (process->m_pid != gp_current_process->m_pid) && newState == RDY && process->m_priority > gp_current_process->m_priority) {
+		k_release_processor();
 	}
 }
