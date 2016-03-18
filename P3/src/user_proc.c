@@ -54,11 +54,16 @@ void set_user_procs() {
 
 void proc_wall_clock(void) {
 	char ASCII0 = '0';
+	int SECONDS_IN_DAY = 86400;
+	int SECONDS_IN_MINUTE = 60;
+	int MINUTES_IN_HOUR = 60;
+	int SECONDS_IN_HOUR = SECONDS_IN_MINUTE*MINUTES_IN_HOUR;
+	int CLOCK_DELAY = 1000;
+	char com[3] = "%W";
 	MSG_BUF* output_msg;
 	MSG_BUF* incoming_msg;
 	MSG_BUF* self_msg = request_memory_block();
 	int sender_id;
-	//int curInd;
 	int display_flag = 0;
 	char* command_text;
 	int numHours;
@@ -67,30 +72,28 @@ void proc_wall_clock(void) {
 	U32 clock_time = 0;
 	MSG_BUF* kcd_reg_msg = request_memory_block();
 	kcd_reg_msg->mtype = KCD_REG;
-	kcd_reg_msg->mtext[0] = '%';
-	kcd_reg_msg->mtext[1] = 'W';
-	kcd_reg_msg->mtext[2] = '\0';
+	str_copy(com, kcd_reg_msg->mtext);
 	send_message(PID_KCD, kcd_reg_msg);
 	self_msg->mtype = DEFAULT;
 	while (1) {
 		incoming_msg = (MSG_BUF*) receive_message(&sender_id);
 		if (PID_CLOCK == sender_id) {
 			if (display_flag) {
-				delayed_send(PID_CLOCK, self_msg, 1000);
+				delayed_send(PID_CLOCK, self_msg, CLOCK_DELAY);
 			
-				clock_time = (clock_time + 1) % 86400;
+				clock_time = (clock_time + 1) % SECONDS_IN_DAY;
 				
 				output_msg = (MSG_BUF*) k_request_memory_block();
 				output_msg->mtype = CRT_DISPLAY;
 				
-				output_msg->mtext[0] = (char)(clock_time/36000) + '0';
-				output_msg->mtext[1] = (char)((clock_time/3600) % 10) + '0';
+				output_msg->mtext[0] = (char)((clock_time/SECONDS_IN_HOUR)/10) + ASCII0;
+				output_msg->mtext[1] = (char)((clock_time/SECONDS_IN_HOUR) % 10) + ASCII0;
 				output_msg->mtext[2] = ':';
-				output_msg->mtext[3] = (char) (((clock_time/60)%60)/10) + '0';
-				output_msg->mtext[4] = (char) (((clock_time/60)%60)%10) + '0';
+				output_msg->mtext[3] = (char) (((clock_time/SECONDS_IN_MINUTE)%SECONDS_IN_MINUTE)/10) + ASCII0;
+				output_msg->mtext[4] = (char) (((clock_time/SECONDS_IN_MINUTE)%SECONDS_IN_MINUTE)%10) + ASCII0;
 				output_msg->mtext[5] = ':';
-				output_msg->mtext[6] = (char) ((clock_time%60)/10) + '0';
-				output_msg->mtext[7] = (char) ((clock_time%60)%10) + '0';
+				output_msg->mtext[6] = (char) ((clock_time%SECONDS_IN_MINUTE)/10) + ASCII0;
+				output_msg->mtext[7] = (char) ((clock_time%SECONDS_IN_MINUTE)%10) + ASCII0;
 				output_msg->mtext[8] = '\n';
 				output_msg->mtext[9] = '\r';
 				output_msg->mtext[10] = '\0';
@@ -103,15 +106,15 @@ void proc_wall_clock(void) {
 			if ('W' == command_text[1] && 'R' == command_text[2] && '\0' == command_text[3]) {
 				clock_time = 0;
 				if (0 == display_flag) {
-					delayed_send(PID_CLOCK, self_msg, 1000);
+					delayed_send(PID_CLOCK, self_msg, CLOCK_DELAY);
 				}
 				display_flag = 1;
 			}
 			else if ('S' == command_text[2] && ' ' == command_text[3] && '\0' == command_text[12]) {
 				if (':' == command_text[6] && ':' == command_text[9]) {
-					numHours = (int)(command_text[4] - ASCII0) * 10 + (int)(command_text[5] - ASCII0) ;
-					numMinutes = (int)(command_text[7] - ASCII0) * 10 + (int)(command_text[8] - ASCII0);
-					numSeconds = (int)(command_text[10] - ASCII0) * 10 + (int)(command_text[11] - ASCII0);
+					numHours = str_to_int(command_text+4);
+					numMinutes = str_to_int(command_text+7);
+					numSeconds = str_to_int(command_text+10);
 					
 					if ( (int)(command_text[4] - ASCII0) < 0 || (int)(command_text[4] - ASCII0) > 9 || (int)(command_text[5] - ASCII0) < 0 || (int)(command_text[5] - ASCII0) > 9
 						|| (int)(command_text[7] - ASCII0) < 0 || (int)(command_text[7] - ASCII0) > 9 || (int)(command_text[8] - ASCII0) < 0 || (int)(command_text[8] - ASCII0) > 9
@@ -120,9 +123,9 @@ void proc_wall_clock(void) {
 							//Invalid time format error
 						}
 						else {
-							clock_time = numSeconds+60*(numMinutes+60*numHours);
+							clock_time = numSeconds+SECONDS_IN_MINUTE*(numMinutes+MINUTES_IN_HOUR*numHours);
 							if (0 == display_flag) {
-								delayed_send(PID_CLOCK, self_msg, 1000);
+								delayed_send(PID_CLOCK, self_msg, CLOCK_DELAY);
 							}
 							display_flag = 1;
 						}

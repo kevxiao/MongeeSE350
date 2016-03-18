@@ -7,7 +7,7 @@
 
   <Targets>
     <Target>
-      <TargetName>P2</TargetName>
+      <TargetName>P3</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <TargetOption>

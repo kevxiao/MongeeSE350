@@ -2,6 +2,7 @@
 #include "uart.h"
 #include "sys_proc.h"
 #include "rtx.h"
+#include "str_util.h"
 
 
 #ifdef DEBUG_0
@@ -63,24 +64,26 @@ void crtproc(void){
 
 void set_command_id(int pid, char* identifier)  {
 	REG_COM_ID* cur;
-	int i = 0;
+	//int i = 0;
 	
 	cur = (REG_COM_ID*) k_request_memory_block();
-	if (NULL == cur){
-		#ifdef DEBUG_0
-			uart1_put_string("No moar memory to register this command\n\r");
-		#endif // DEBUG_0
-		return;
-	}
+	//doesnt need to do this if you donte need to block
+// 	if (NULL == cur){
+// 		#ifdef DEBUG_0
+// 			uart1_put_string("No moar memory to register this command\n\r");
+// 		#endif // DEBUG_0
+// 		return;
+// 	}
 	cur->mp_next = gp_reg_com_head;
 	gp_reg_com_head = cur;
 	
 	cur->mpid = pid;
-	while ('\0' != identifier[i]) {
-		cur->mtext_id[i] = identifier[i];
-		i++;
-	}
-	cur->mtext_id[i] = '\0';
+	str_copy(identifier, cur->mtext_id);
+// 	while ('\0' != identifier[i]) {
+// 		cur->mtext_id[i] = identifier[i];
+// 		i++;
+// 	}
+// 	cur->mtext_id[i] = '\0';
 }
 
 int get_pid_from_com_id(char* command) {
@@ -91,6 +94,7 @@ int get_pid_from_com_id(char* command) {
 	while (NULL != cur) {
 		found = 1;
 		i = 0;
+		//cannot use str_compare here because the command string can have extra characters at the end
 		while ('\0' != cur->mtext_id[i]) {
 			if (cur->mtext_id[i] != command[i]) {
 				found = 0;
@@ -107,36 +111,35 @@ int get_pid_from_com_id(char* command) {
 }
 
 void kcdproc(void) {
-	MSG_BUF* command_msg;
-	//MSG_BUF* string_msg;
+	MSG_BUF* msg;
 	int sender_id;
 	int pid;
 	char* command_text;
 	while (1) {
-		command_msg = (MSG_BUF*) receive_message(&sender_id);
+		msg = (MSG_BUF*) receive_message(&sender_id);
 		//execute command
-		command_text = command_msg->mtext;
-		if (KCD_REG == command_msg->mtype) {
+		command_text = msg->mtext;
+		if (KCD_REG == msg->mtype) {
 			if ('%' == command_text[0]) {
 				set_command_id(sender_id, command_text + 1);
 			}
-			release_memory_block(command_msg);
+			release_memory_block(msg);
 		}
-		else if (CRT_DISPLAY == command_msg->mtype) {
-			send_message(PID_CRT, (void*) command_msg);
+		else if (CRT_DISPLAY == msg->mtype) {
+			send_message(PID_CRT, (void*) msg);
 		}
 		//check if valid command
 		else if ('%' == command_text[0]) {
 			pid = get_pid_from_com_id(command_text+1);
 			if (RTX_ERR != pid) {
-				send_message(pid, (void*)command_msg);
+				send_message(pid, (void*)msg);
 			}
 			else {
 				//unrecognized command
 			}
 		}
 		else {
-			release_memory_block(command_msg);
+			release_memory_block(msg);
 		}
 	}
 }
