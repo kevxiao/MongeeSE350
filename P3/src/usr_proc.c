@@ -8,7 +8,7 @@
 
 #include "rtx.h"
 #include "uart_polling.h"
-#include "test_proc.h"
+#include "usr_proc.h"
 #include "str_util.h"
 
 #ifdef DEBUG_0
