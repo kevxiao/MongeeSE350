@@ -83,7 +83,7 @@ void proc_wall_clock(void) {
 			
 				clock_time = (clock_time + 1) % SECONDS_IN_DAY;
 				
-				output_msg = (MSG_BUF*) k_request_memory_block();
+				output_msg = (MSG_BUF*) request_memory_block();
 				output_msg->mtype = CRT_DISPLAY;
 				
 				output_msg->mtext[0] = (char)((clock_time/SECONDS_IN_HOUR)/10) + ASCII0;

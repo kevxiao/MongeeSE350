@@ -66,7 +66,7 @@ void set_command_id(int pid, char* identifier)  {
 	REG_COM_ID* cur;
 	//int i = 0;
 	
-	cur = (REG_COM_ID*) k_request_memory_block();
+	cur = (REG_COM_ID*) request_memory_block();
 	//doesnt need to do this if you donte need to block
 // 	if (NULL == cur){
 // 		#ifdef DEBUG_0
