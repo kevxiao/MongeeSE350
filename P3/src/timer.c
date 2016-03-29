@@ -14,6 +14,7 @@
 #define BIT(X) (1<<X)
 
 volatile uint32_t g_timer_count = 0; // increment every 1 ms
+volatile uint32_t g_timer1_count = 0; // increment every 1 ms
 
 extern MSG_BUF* gp_delayed_msgs;//DELAYED_MSG_QUEUE g_delayed_msg_queue;
 
@@ -69,7 +70,9 @@ uint32_t timer_init(uint8_t n_timer)
 		*/
 		pTimer = (LPC_TIM_TypeDef *) LPC_TIM0;
 
-	} else { /* other timer not supported yet */
+	} else if (n_timer == 1) {
+		pTimer = (LPC_TIM_TypeDef *) LPC_TIM1;
+	}		else { /* other timer not supported yet */
 		return 1;
 	}
 
@@ -96,11 +99,18 @@ uint32_t timer_init(uint8_t n_timer)
 	   Reset on MR0: Reset TC if MR0 mathches it.
 	*/
 	pTimer->MCR = BIT(0) | BIT(1);
+	
+	if(n_timer == 0) {
+		g_timer_count = 0;
 
-	g_timer_count = 0;
+		/* Step 4.4: CSMSIS enable timer0 IRQ */
+		NVIC_EnableIRQ(TIMER0_IRQn);
+	} else if(n_timer == 1) {
+		g_timer1_count = 0;
 
-	/* Step 4.4: CSMSIS enable timer0 IRQ */
-	NVIC_EnableIRQ(TIMER0_IRQn);
+		/* Step 4.4: CSMSIS enable timer1 IRQ */
+		NVIC_EnableIRQ(TIMER1_IRQn);
+	}
 
 	/* Step 4.5: Enable the TCR. See table 427 on pg494 of LPC17xx_UM. */
 	pTimer->TCR = 1;
@@ -150,3 +160,22 @@ void c_TIMER0_IRQHandler(void)
 	gp_current_process = orig_proc;
 }
 
+__asm void TIMER1_IRQHandler(void)
+{
+	PRESERVE8
+	IMPORT c_TIMER1_IRQHandler
+	PUSH{r4-r11, lr}
+	BL c_TIMER1_IRQHandler
+	POP{r4-r11, pc}
+} 
+/**
+ * @brief: c TIMER0 IRQ Handler
+ */
+void c_TIMER1_IRQHandler(void)
+{
+		
+	/* ack inttrupt, see section  21.6.1 on pg 493 of LPC17XX_UM */
+	LPC_TIM1->IR = BIT(0);  
+	
+	g_timer1_count++ ;
+}

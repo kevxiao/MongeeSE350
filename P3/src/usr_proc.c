@@ -10,12 +10,14 @@
 #include "uart_polling.h"
 #include "usr_proc.h"
 #include "str_util.h"
+#include "timer.h"
 
 #ifdef DEBUG_0
 #include "printf.h"
 #endif /* DEBUG_0 */
 
 extern uint32_t g_timer_count;
+extern uint32_t g_timer1_count;
 
 /* initialization table item */
 PROC_INIT g_test_procs[NUM_TEST_PROCS];
@@ -39,6 +41,7 @@ void set_test_procs() {
 		g_test_procs[i].m_stack_size=0x100;
 	}
 
+	timer_init(1);
 
 	g_test_procs[0].mpf_start_pc = &proc1;
 	g_test_procs[1].mpf_start_pc = &proc2;
@@ -155,7 +158,7 @@ void proc6(void){
 	send_message(PID_CRT , message);
 	
 	set_process_priority(PID_CLOCK, MEDIUM);
-	set_process_priority(PID_P5, MEDIUM);
+	set_process_priority(PID_P5, HIGH);
 	set_process_priority(PID_A, LOW);
 	set_process_priority(PID_B, LOW);
 	set_process_priority(PID_C, MEDIUM);
@@ -258,8 +261,47 @@ void proc4(void) {
 	}
 }
 
+void proc5(void){
+	
+	MSG_BUF* message;
+	char test_message[20] = "Hello";
+	int sender_id;
+	MSG_BUF* received_message;
+	int start_time, finish_time;
+	while ( 1) {
+		
+		start_time = g_timer1_count;
+		message = request_memory_block();
+		finish_time = g_timer1_count;
+		#ifdef DEBUG_0
+			printf("Request memory block time: %d\n\r", finish_time - start_time);
+		#endif
+		
+		str_copy(test_message, message->mtext);
+		message->mtype = DEFAULT;
+		
+		start_time = g_timer1_count;
+		send_message(PID_P5 ,message);
+		finish_time = g_timer1_count;
+		#ifdef DEBUG_0
+			printf("Send message time: %d\n\r", finish_time - start_time);
+			//printf("Current Time: %d\n\r", finish_time);
+		#endif
+		start_time = g_timer1_count;
+		received_message = receive_message(&sender_id);
+		finish_time = g_timer1_count;
+		#ifdef DEBUG_0
+			printf("Receive message time: %d\n\r", finish_time - start_time);
+		#endif
+		set_process_priority(PID_P5, LOW);
+		release_processor();
+	}
+	
+}
+
+
 //could use more str_copy
-void proc5(void) {
+/*void proc5(void) {
 	int sender_id;
 	MSG_BUF* incoming_msg;
 	MSG_BUF* action_msg;
@@ -308,4 +350,4 @@ void proc5(void) {
 		}
 		release_memory_block(incoming_msg);
 	}
-}
+}*/
