@@ -14,16 +14,16 @@
 #define BIT(X) (1<<X)
 
 volatile uint32_t g_timer_count = 0; // increment every 1 ms
-volatile uint32_t g_timer1_count = 0; // increment every 1 ms
+volatile uint32_t g_timer1_count = 0; // increment every 1.2 us
 
-extern MSG_BUF* gp_delayed_msgs;//DELAYED_MSG_QUEUE g_delayed_msg_queue;
+extern MSG_BUF* gp_delayed_msgs;
 
 PCB* gp_timer_pcb;
 extern PCB* gp_current_process;
 extern PCB** gp_pcbs;	
 
 /**
- * @brief: initialize timer. Only timer 0 is supported
+ * @brief: initialize timer. Only timer 0 and timer 1 is supported
  */
 uint32_t timer_init(uint8_t n_timer) 
 {
@@ -88,7 +88,11 @@ uint32_t timer_init(uint8_t n_timer)
 	   TC (Timer Counter) toggles b/w 0 and 1 every 12500 PCLKs
 	   see MR setting below 
 	*/
-	pTimer->PR = 12499;  
+	if(n_timer == 0) {
+		pTimer->PR = 12499;
+	} else if(n_timer == 1) {
+		pTimer->PR = 15;
+	}
 
 	/* Step 4.2: MR setting, see section 21.6.7 on pg496 of LPC17xx_UM. */
 	pTimer->MR0 = 1;
@@ -139,7 +143,7 @@ __asm void TIMER0_IRQHandler(void)
 void c_TIMER0_IRQHandler(void)
 {
 	int orig_sender;
-	PCB* orig_proc = gp_current_process;
+	PCB* orig_proc = gp_current_process; //save process
 	MSG_BUF* temp;
 	
 	gp_current_process = gp_timer_pcb;
@@ -149,7 +153,7 @@ void c_TIMER0_IRQHandler(void)
 	
 	g_timer_count++ ;
 	
-	//HERE!!!
+	//send all msgs past send time
 	while (gp_delayed_msgs != NULL && gp_delayed_msgs->m_send_time <= g_timer_count) {
 		temp = gp_delayed_msgs;
 		gp_delayed_msgs = gp_delayed_msgs->mp_next;
@@ -157,9 +161,17 @@ void c_TIMER0_IRQHandler(void)
 		k_send_message(temp->m_recv_pid, (void*) temp);
 		temp->m_send_pid = orig_sender;
 	}
+	//restore process
 	gp_current_process = orig_proc;
 }
 
+/**
+ * @brief: use CMSIS ISR for TIMER1 IRQ Handler
+ * NOTE: This example shows how to save/restore all registers rather than just
+ *       those backed up by the exception stack frame. We add extra
+ *       push and pop instructions in the assembly routine. 
+ *       The actual c_TIMER1_IRQHandler does the rest of irq handling
+ */
 __asm void TIMER1_IRQHandler(void)
 {
 	PRESERVE8
@@ -169,13 +181,12 @@ __asm void TIMER1_IRQHandler(void)
 	POP{r4-r11, pc}
 } 
 /**
- * @brief: c TIMER0 IRQ Handler
+ * @brief: c TIMER1 IRQ Handler
  */
 void c_TIMER1_IRQHandler(void)
 {
+	g_timer1_count++ ;
 		
 	/* ack inttrupt, see section  21.6.1 on pg 493 of LPC17XX_UM */
 	LPC_TIM1->IR = BIT(0);  
-	
-	g_timer1_count++ ;
 }

@@ -67,6 +67,7 @@ void memory_init(void)
 
 	/* allocate memory for pcb pointers   */
 	gp_pcbs = (PCB **)p_end;
+	//allocate for all processes
 	p_end += (NUM_TEST_PROCS + NUM_SYS_PROCS + NUM_IRQ_PROCS + NUM_USER_PROCS) * sizeof(PCB *);
   
 	for ( i = 0; i < NUM_TEST_PROCS + NUM_SYS_PROCS + NUM_IRQ_PROCS + NUM_USER_PROCS; i++ ) {
@@ -99,7 +100,8 @@ void heap_init(void) {
 	#ifdef DEBUG_0
 		printf("k_mem_init: ram limit at 0x%x\n\r", gp_stack);
 	#endif
-	while( (unsigned int)temp + MEM_BLK_SIZE < /*(unsigned int)p_end + 128 * 10*/(unsigned int)gp_stack - MEM_BLK_SIZE){
+	//add mem_blks to p_heap_head linked list until no more space in heap
+	while( (unsigned int)temp + MEM_BLK_SIZE < (unsigned int)gp_stack - MEM_BLK_SIZE){
 		temp->next_blk = (U32*)((unsigned int)temp + MEM_BLK_SIZE);
 		#ifdef DEBUG_0
 			printf("k_mem_init: block at 0x%x\n\r", (void*)temp);
@@ -138,22 +140,17 @@ void *k_request_memory_block(void) {
 #ifdef DEBUG_0 
 	printf("k_request_memory_block: Proc %d requesting block @ 0x%x\n\r", gp_current_process->m_pid, p_heap_head);
 #endif /* ! DEBUG_0 */
+	//block when no more memory
 	while (NULL == p_heap_head) {
 		#ifdef DEBUG_0
 		printf("k_request_memory_block: no moar memory\n\r");
 		#endif /* ! DEBUG_0 */
-		if (gp_current_process->m_pid == PID_UART_IPROC || gp_current_process->m_pid == PID_TIMER_IPROC /*|| gp_current_process->m_pid == PID_KCD*/){
+		//don't block for special processes
+		if (gp_current_process->m_pid == PID_UART_IPROC || gp_current_process->m_pid == PID_TIMER_IPROC){
 			return NULL;
 		}
 		k_change_process_state(gp_current_process, BLOCKED);
 	}
-// 	while(blocks_in_use[i] != NULL && i < numBlocks){
-// 		if (i >= numBlocks){
-// 			printf("MAJOR ERROR\n\r");
-// 		}
-// 		i++;
-// 	}
-// 	blocks_in_use[i] = temp;
 	temp = p_heap_head;
 	p_heap_head = (mem_blk*) p_heap_head->next_blk;
 	return (void*) temp ;
@@ -162,26 +159,14 @@ void *k_request_memory_block(void) {
 int k_release_memory_block(void *p_mem_blk) {
 	mem_blk* temp = (mem_blk*) p_mem_blk;
 	int i;
-	//int found = 0;
 	PCB* cur_pcb = NULL;
-// 	if (p_mem_blk == NULL){
-// 		return RTX_ERR;
-// 	}
-// 	for (i=0; i < numBlocks; i++){
-// 		if (blocks_in_use[i] == temp){
-// 			blocks_in_use[i] = NULL;
-// 			found++;
-// 			break;
-// 		}
-// 	}
-// 	if(found == 0){
-// 		return RTX_ERR;
-// 	}
+
 #ifdef DEBUG_0 
 	printf("k_release_memory_block: releasing block @ 0x%x\n\r", p_mem_blk);
 #endif /* ! DEBUG_0 */
 	temp->next_blk = (U32*) p_heap_head;
 	p_heap_head = temp;
+	//look to unblock highest priority process
 	for (i=0; i < NUM_PRIORITIES; i++){
 		cur_pcb = gp_blocked_priority_begin[i];
 		if(cur_pcb != NULL){

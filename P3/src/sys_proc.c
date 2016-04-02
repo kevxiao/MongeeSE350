@@ -13,6 +13,7 @@ PROC_INIT g_sys_procs[NUM_SYS_PROCS];
 PROC_INIT g_irq_procs[NUM_IRQ_PROCS];
 REG_COM_ID* gp_reg_com_head = NULL;
 
+//for init processes
 void set_sys_procs() {
 	int i;
 	for( i = 0; i < NUM_SYS_PROCS; i++ ) {
@@ -28,6 +29,7 @@ void set_sys_procs() {
 	g_sys_procs[2].mpf_start_pc = &crtproc;
 }
 
+//for init processes
 void set_irq_procs() {
 	int i;
 	for( i = 0; i < NUM_IRQ_PROCS; i++ ) {
@@ -58,34 +60,22 @@ void crtproc(void){
 			write_to_CRT(message->mtext);
 		}
 		release_memory_block(message);
-		//release_processor();
 	}
 }
 
+//adds to linked list
 void set_command_id(int pid, char* identifier)  {
 	REG_COM_ID* cur;
-	//int i = 0;
 	
 	cur = (REG_COM_ID*) request_memory_block();
-	//doesnt need to do this if you donte need to block
-// 	if (NULL == cur){
-// 		#ifdef DEBUG_0
-// 			uart1_put_string("No moar memory to register this command\n\r");
-// 		#endif // DEBUG_0
-// 		return;
-// 	}
 	cur->mp_next = gp_reg_com_head;
 	gp_reg_com_head = cur;
 	
 	cur->mpid = pid;
 	str_copy(identifier, cur->mtext_id);
-// 	while ('\0' != identifier[i]) {
-// 		cur->mtext_id[i] = identifier[i];
-// 		i++;
-// 	}
-// 	cur->mtext_id[i] = '\0';
 }
 
+//gets from linked list
 int get_pid_from_com_id(char* command) {
 	REG_COM_ID* cur = gp_reg_com_head;
 	int i;
@@ -120,16 +110,19 @@ void kcdproc(void) {
 		//execute command
 		command_text = msg->mtext;
 		if (KCD_REG == msg->mtype) {
+			//register command
 			if ('%' == command_text[0]) {
 				set_command_id(sender_id, command_text + 1);
 			}
 			release_memory_block(msg);
 		}
 		else if (CRT_DISPLAY == msg->mtype) {
+			//send to CRT
 			send_message(PID_CRT, (void*) msg);
 		}
 		//check if valid command
 		else if ('%' == command_text[0]) {
+			//send to relevant process
 			pid = get_pid_from_com_id(command_text+1);
 			if (RTX_ERR != pid) {
 				send_message(pid, (void*)msg);

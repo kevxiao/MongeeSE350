@@ -224,7 +224,7 @@ void c_UART0_IRQHandler(void)
 		uart1_put_char(g_char_in);
 		uart1_put_string("\n\r");
 #endif // DEBUG_0
-		g_buffer[12] = g_char_in; // nasty hack
+		g_buffer[12] = g_char_in;
 		g_send_char = 1;
 		
 		#ifdef _DEBUG_HOTKEYS
@@ -251,10 +251,8 @@ void c_UART0_IRQHandler(void)
 		cur_char_msg->mtype = CRT_DISPLAY;
 		cur_char_msg->mtext[0] = g_char_in;
 		if ('\n'  == g_char_in || '\r' == g_char_in) {
+			//add endline to mtext
 			str_copy(endline, cur_char_msg->mtext);
-// 			cur_char_msg->mtext[0] = '\n';
-// 			cur_char_msg->mtext[1] = '\r';
-// 			cur_char_msg->mtext[2] = '\0';
 		}
 		else {
 			cur_char_msg->mtext[1] = '\0';
@@ -263,9 +261,9 @@ void c_UART0_IRQHandler(void)
 		
 		if (g_entering_kc) {
 			//add to msg_buf
-			//make sure you don't overflow the message buffer, could be like 100
 			gp_cur_msg_buf->mtext[g_entering_kc] = g_char_in;
 			if ('\n' == g_char_in || '\r' == g_char_in) {
+				//send full line text to kcd
 				gp_cur_msg_buf->mtext[g_entering_kc] = '\0';
 				k_send_message(PID_KCD, (void*) gp_cur_msg_buf);
 				g_entering_kc = -1;
@@ -287,25 +285,15 @@ void c_UART0_IRQHandler(void)
 			g_entering_kc++;
 		}
 		
-		/* setting the g_switch_flag */
-// 		if ( g_char_in == 'S' ) {
-// 			g_switch_flag = 1; 
-// 		} else {
-// 			g_switch_flag = 0;
-// 		}
 	} else if (IIR_IntId & IIR_THRE) {
 	/* THRE Interrupt, transmit holding register becomes empty */
 
 		if (*gp_buffer != '\0' ) {
 			g_char_out = *gp_buffer;
-#ifdef DEBUG_0
-			//uart1_put_string("Writing a char = ");
-			//uart1_put_char(g_char_out);
-			//uart1_put_string("\n\r");
-			
-			// you could use the printf instead
+#ifdef DEBUG_0			
 			printf("Writing a char = %c \n\r", g_char_out);
-#endif // DEBUG_0			
+#endif // DEBUG_0	
+			//output char
 			pUart->THR = g_char_out;
 			gp_buffer++;
 		} else {

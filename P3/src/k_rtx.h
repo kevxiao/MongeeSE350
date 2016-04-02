@@ -44,9 +44,4 @@ typedef struct pcb
 	MSG_BUF* mp_last_msg;
 } PCB;
 
-//Thing for queue
-typedef struct delayed_msgs {
-	MSG_BUF* mp_first_msg;
-} DELAYED_MSGS;
-
 #endif // ! K_RTX_H_

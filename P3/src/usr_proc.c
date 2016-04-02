@@ -41,8 +41,6 @@ void set_test_procs() {
 		g_test_procs[i].m_stack_size=0x100;
 	}
 
-	timer_init(1);
-
 	g_test_procs[0].mpf_start_pc = &proc1;
 	g_test_procs[1].mpf_start_pc = &proc2;
 	g_test_procs[2].mpf_start_pc = &proc3;
@@ -52,6 +50,7 @@ void set_test_procs() {
 	g_test_procs[5].m_priority = MEDIUM;
 }
 
+//process that runs the tests
 void proc6(void){
 	int passed = 0;
 	int failed = 0;
@@ -78,7 +77,8 @@ void proc6(void){
 	set_process_priority(PID_P3, MEDIUM);
 	set_process_priority(PID_P6, LOW);
 	total++;
-	
+
+	//check passed/failed
 	if (str_compare(text, textReceived)) {
 		passed++;
 		passTestText[16] = '1';
@@ -107,6 +107,7 @@ void proc6(void){
 		release_processor();
 	}
 	
+	//check passed/failed
 	if(difference5000 == 5000){
 		passed++;
 		passTestText[16] = '2';
@@ -125,11 +126,11 @@ void proc6(void){
 	
 	set_process_priority(PID_P1, LOWEST);	
 	
-	//something test
 	set_process_priority(PID_P4, MEDIUM);
 	set_process_priority(PID_P6, LOW);
 	total++;
 	
+	//check passed/failed
 	if(shouldNotRun != 1){
 		passed++;
 		passTestText[16] = '3';
@@ -147,6 +148,8 @@ void proc6(void){
 	}
 
 	set_process_priority(PID_P4, LOWEST);
+	
+	//Output result
 	
 	endTestText[11] = '0'+passed;
 	endTestText[13] = '0'+total;
@@ -169,8 +172,9 @@ void proc6(void){
 	}
 }
 
+//delayed send to self in 5 seconds
 void proc1(void) {
-	MSG_BUF* message;// = request_memory_block();
+	MSG_BUF* message;
 	int i = 0;
 	char text[20] = "Delayed Message\n\r";
 	int sender_id;
@@ -186,7 +190,7 @@ void proc1(void) {
 		}
 		message->mtext[i] = text[i];
 		message->mtype = DEFAULT;
-		//send_message(PID_CRT ,message);
+		//send message to self in 5 seconds
 		delayed_send(PID_P1, message, 5000);
 		send_time = g_timer_count;
 		i=0;
@@ -210,18 +214,12 @@ void proc1(void) {
 	}
 }
 
+//sends a message to proc 3
 void proc2(void) {
 	MSG_BUF* message;
-// 	int i = 0;
 	while ( 1) {
 		message = request_memory_block();
-		//i=0;
 		str_copy(text, message->mtext);
-// 		while(text[i]!='\0'){
-// 			message->mtext[i] = text[i];
-// 			i++;
-// 		}
-// 		message->mtext[i] = text[i];
 		message->mtype = DEFAULT;
 		send_message(PID_P3 ,message);
 		set_process_priority(PID_P2, LOWEST);
@@ -229,6 +227,7 @@ void proc2(void) {
 	}
 }
 
+//receives a message from proc 2
 void proc3(void) {
 	int i=0;
 	int sender_id;
@@ -243,16 +242,12 @@ void proc3(void) {
 			printf("\n\r");
 		#endif
 		str_copy(message->mtext, textReceived);
-// 		while(message->mtext[i]!='\0'){
-// 			textReceived[i] = message->mtext[i];
-// 			i++;
-// 		}
-// 		textReceived[i] = message->mtext[i];
 		release_memory_block(message);
 		set_process_priority(PID_P6, MEDIUM);
 	}
 }
 
+//should be blocked on receive always
 void proc4(void) {
 	int sender_id;
 	while ( 1) {
@@ -261,6 +256,7 @@ void proc4(void) {
 	}
 }
 
+//Used to analyze timings
 void proc5(void){
 	
 	MSG_BUF* message;
@@ -270,11 +266,11 @@ void proc5(void){
 	int start_time, finish_time;
 	while ( 1) {
 		
-		start_time = g_timer1_count;
+ 		start_time = g_timer1_count;
 		message = request_memory_block();
 		finish_time = g_timer1_count;
 		#ifdef DEBUG_0
-			printf("Request memory block time: %d\n\r", finish_time - start_time);
+			printf("Request memory block time: %d\n\r", (finish_time - start_time));
 		#endif
 		
 		str_copy(test_message, message->mtext);
@@ -285,7 +281,6 @@ void proc5(void){
 		finish_time = g_timer1_count;
 		#ifdef DEBUG_0
 			printf("Send message time: %d\n\r", finish_time - start_time);
-			//printf("Current Time: %d\n\r", finish_time);
 		#endif
 		start_time = g_timer1_count;
 		received_message = receive_message(&sender_id);
@@ -298,56 +293,3 @@ void proc5(void){
 	}
 	
 }
-
-
-//could use more str_copy
-/*void proc5(void) {
-	int sender_id;
-	MSG_BUF* incoming_msg;
-	MSG_BUF* action_msg;
-	char com[3] = "%R";
-	MSG_BUF* kcd_reg_msg = request_memory_block();
-	int i;
-	int j;
-	char dtext[40] = "Proc 5 says this is a command.\n\r";
-	kcd_reg_msg->mtype = KCD_REG;
-	str_copy(com, kcd_reg_msg->mtext);
-// 	kcd_reg_msg->mtext[0] = '%';
-// 	kcd_reg_msg->mtext[1] = 'R';
-// 	kcd_reg_msg->mtext[2] = '\0';
-	send_message(PID_KCD, kcd_reg_msg);
-	while (1) {
-		incoming_msg = (MSG_BUF*) receive_message(&sender_id);
-		if ('R' == incoming_msg->mtext[1]) {
-			action_msg = request_memory_block();
-			i = 0;
-			j = 0;
-			action_msg->mtext[j] = incoming_msg->mtext[i];
-			i++;
-			j++;
-			while(incoming_msg->mtext[i] == 'R'){i++;}
-			while(incoming_msg->mtext[i] != '\0') {
-				action_msg->mtext[j] = incoming_msg->mtext[i];
-				i++;
-				j++;
-			}
-			
-			action_msg->mtext[j] = incoming_msg->mtext[i];
-			action_msg->mtype = KCD_REG;
-			send_message(PID_KCD, action_msg);
-		}
-		else {
-			action_msg = request_memory_block();
-			i = 0;
-			while(dtext[i] !='\0'){
-				action_msg->mtext[i] = dtext[i];
-				i++;
-			}
-			action_msg->mtext[i] = dtext[i];
-			action_msg->mtype = CRT_DISPLAY;
-			send_message(PID_CRT , action_msg);
-			
-		}
-		release_memory_block(incoming_msg);
-	}
-}*/

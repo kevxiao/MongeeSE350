@@ -41,12 +41,13 @@ extern PROC_INIT g_user_procs[NUM_USER_PROCS];
 extern PROC_INIT g_sys_procs[NUM_SYS_PROCS];
 extern PROC_INIT g_irq_procs[NUM_IRQ_PROCS];
 
-//DELAYED_MSGS g_delayed_msgs;
-
+//ready lists
 PCB* gp_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 PCB* gp_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
+//blocked lists
 PCB* gp_blocked_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 PCB* gp_blocked_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
+//blocked on receive lists
 PCB* gp_bor_priority_end[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 PCB* gp_bor_priority_begin[NUM_PRIORITIES] = {NULL, NULL, NULL, NULL, NULL};
 
@@ -135,7 +136,7 @@ PCB *scheduler(void)
 	PCB* cur_pcb = NULL;
 	int i;
 	
-	
+	//add gp_current_process to the back of its priority list
 	if(gp_current_process != NULL && gp_current_process->m_state != BLOCKED && gp_current_process->m_state != BLOCKED_ON_RECEIVE){
 		
 		gp_current_process->mp_next = NULL;
@@ -160,14 +161,6 @@ PCB *scheduler(void)
 				gp_priority_end[i] = NULL;
 			}
 			cur_pcb->mp_next = NULL;
-			/*
-			if(gp_priority_end[i] != NULL){
-				gp_priority_end[i]->mp_next = cur_pcb;
-			}else{
-				gp_priority_begin[i] = cur_pcb;
-			}
-			gp_priority_end[i] = cur_pcb;
-			*/
 			return cur_pcb;
 		}
 	}
@@ -217,6 +210,7 @@ int process_switch(PCB *p_pcb_old)
 	}
 	return RTX_OK;
 }
+
 /**
  * @brief release_processor(). 
  * @return RTX_ERR on error and zero on success
@@ -271,7 +265,6 @@ int k_set_process_priority (int process_id, int priority)
 	
 	if(process_id == gp_current_process->m_pid){
 		gp_current_process->m_priority = priority;
-		//gp_current_process->m_state = RDY;
 		k_release_processor();
 		return RTX_OK;
 	}
@@ -377,7 +370,6 @@ PCB* k_get_PCB (int process_id)
 }
 
 int k_send_message(int process_id, void *message_envelope) {
-	//atomic(on) ???
 	PCB *receiving = NULL;
 	MSG_BUF * new_node = (MSG_BUF*) message_envelope;
 	int i;
@@ -402,13 +394,11 @@ int k_send_message(int process_id, void *message_envelope) {
 		}
 		return RTX_OK;
 	}
-	//atomic(off) ???
 	return RTX_ERR;
 }
 
 void* k_receive_message(int *sender_id) {
 	void* temp;
-	//atomic(on) ???
 	while (gp_current_process->mp_first_msg == NULL) {
 		k_change_process_state(gp_current_process, BLOCKED_ON_RECEIVE);
 	}
@@ -418,7 +408,6 @@ void* k_receive_message(int *sender_id) {
 	if (NULL == gp_current_process->mp_first_msg) {
 		gp_current_process->mp_last_msg = NULL;
 	}
-	//atomic(off) ???
 	return temp;
 }
 
@@ -451,7 +440,7 @@ int k_delayed_send(int process_id, void *message_envelope, int delay) {
 	return RTX_OK;
 }
 
-void queue_debug_statement(PROC_STATE_E state) {
+int queue_debug_statement(PROC_STATE_E state) {
 	int i = 0;
 	PCB* cur_pcb = NULL;
 	PCB** list_begin;
@@ -478,10 +467,11 @@ void queue_debug_statement(PROC_STATE_E state) {
 		}
 		printf("\n\r");
 	}
+	return RTX_OK;
 }
 
-
-void k_change_process_state(PCB* process, PROC_STATE_E newState){
+//change the state of a process and move it to the right list
+int k_change_process_state(PCB* process, PROC_STATE_E newState){
 	
 	PCB** list_begin;
 	PCB** list_end;
@@ -489,7 +479,7 @@ void k_change_process_state(PCB* process, PROC_STATE_E newState){
 	PCB* prev_pcb = NULL;
 	
 	if(process->m_state == newState){
-		return;
+		return RTX_OK;
 	}
 	
 	if(process->m_state == RDY || process->m_state == RUN || process->m_state == NEW) {
@@ -556,4 +546,5 @@ void k_change_process_state(PCB* process, PROC_STATE_E newState){
 			&& gp_current_process->m_priority <= 4) {
 		k_release_processor();
 	}
+	return RTX_OK;
 }

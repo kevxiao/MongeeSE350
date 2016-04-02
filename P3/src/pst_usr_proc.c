@@ -28,6 +28,7 @@ typedef struct msglocal
 	char mtext[1];          /* body of the message */
 } MSG_LOCAL;
 
+//for process init
 void set_user_procs() {
 	int i;
 	for( i = 0; i < NUM_USER_PROCS; i++ ) {
@@ -79,6 +80,7 @@ void proc_wall_clock(void) {
 		incoming_msg = (MSG_BUF*) receive_message(&sender_id);
 		if (PID_CLOCK == sender_id) {
 			if (display_flag) {
+				//send to self 1 second later
 				delayed_send(PID_CLOCK, self_msg, CLOCK_DELAY);
 			
 				clock_time = (clock_time + 1) % SECONDS_IN_DAY;
@@ -86,6 +88,7 @@ void proc_wall_clock(void) {
 				output_msg = (MSG_BUF*) request_memory_block();
 				output_msg->mtype = CRT_DISPLAY;
 				
+				//turn into string
 				output_msg->mtext[0] = (char)((clock_time/SECONDS_IN_HOUR)/10) + ASCII0;
 				output_msg->mtext[1] = (char)((clock_time/SECONDS_IN_HOUR) % 10) + ASCII0;
 				output_msg->mtext[2] = ':';
@@ -104,8 +107,9 @@ void proc_wall_clock(void) {
 		else if (PID_KCD == sender_id) {
 			command_text = incoming_msg->mtext;
 			if ('W' == command_text[1] && 'R' == command_text[2] && '\0' == command_text[3]) {
+				//start clock
 				clock_time = 0;
-				if (0 == display_flag) {
+				if (0 == display_flag) {			
 					delayed_send(PID_CLOCK, self_msg, CLOCK_DELAY);
 				}
 				display_flag = 1;
@@ -123,19 +127,20 @@ void proc_wall_clock(void) {
 							//Invalid time format error
 						}
 						else {
+							//start clock with time
 							clock_time = numSeconds+SECONDS_IN_MINUTE*(numMinutes+MINUTES_IN_HOUR*numHours);
 							if (0 == display_flag) {
 								delayed_send(PID_CLOCK, self_msg, CLOCK_DELAY);
 							}
 							display_flag = 1;
-						}
-							
+						}	
 				}
 				else {
 					//argument syntax error
 				}
 			}
 			else if ('T' == command_text[2] && '\0' == command_text[3]) {
+				//stop clock
 				display_flag= 0;
 			}
 			else {
@@ -160,6 +165,7 @@ void proc_set_proc_priority(void) {
 	while (1) {
 		incoming_msg = (MSG_BUF*) receive_message(&sender_id);
 		if ('%' == incoming_msg->mtext[0] && 'C' == incoming_msg->mtext[1] && ' ' == incoming_msg->mtext[2]) {
+			//check parameters
 			i = 3;
 			while (' ' == incoming_msg->mtext[i]) {
 				++i;
@@ -185,6 +191,7 @@ void proc_set_proc_priority(void) {
 	}
 }
 
+//on %Z request memory and send to procB
 void procA(void) {
 	char com[3] = "%Z";
 	int num = 0;
@@ -207,24 +214,25 @@ void procA(void) {
 	while(1) {
 		msg = (MSG_BUF*)request_memory_block();
 		msg->mtype = count_report;
-		// sketchy as fuck
+		//add numbers to message
 		msg->mtext[0] = (char)num;
 		msg->mtext[1] = (char)(num >> 8);
 		msg->mtext[2] = (char)(num >> 16);
 		msg->mtext[3] = (char)(num >> 24);
+		//check endian orientation
 		if((int)(msg->mtext[0]) != num) {
 			msg->mtext[0] = (char)(num >> 24);
 			msg->mtext[1] = (char)(num >> 16);
 			msg->mtext[2] = (char)(num >> 8);
 			msg->mtext[3] = (char)num;
 		}
-		// end sketchy as fuck
 		send_message(PID_B, msg);
 		++num;
 		release_processor();
 	}
 }
 
+//pass to procC
 void procB(void) {
 	MSG_BUF* msg;
 	int sender_id;
@@ -234,6 +242,7 @@ void procB(void) {
 	}
 }
 
+//release memory every ten seconds
 void procC(void) {
 	char output[12] = "Process C\n\r";
 	MSG_LOCAL* q_local_head = NULL;

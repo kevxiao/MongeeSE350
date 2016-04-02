@@ -6,6 +6,7 @@
 
 BOOL str_compare(char* a, char* b) {
 	int i;
+	//compare each char
 	for(i = 0; a[i] != '\0' && b[i] != '\0'; ++i) {
 		if(a[i] != b[i]) {
 			return FALSE;
@@ -31,6 +32,7 @@ int str_to_int(char* a) {
 	int i = 0;
 	int result = 0;
 	char ASCII0 = '0';
+	//check each char
 	while ('0' <= a[i] && '9' >= a[i]) {
 		result *=10;
 		result += a[i] - ASCII0;
@@ -38,11 +40,3 @@ int str_to_int(char* a) {
 	}
 	return result;
 }
-
-// void int_to_str(int i, char* str) {
-// 	int i = 0;
-// 	int div = 10;
-// 	int result = 0;
-// 	char ASCII0 = '0';
-// 	while (i % mod 
-// }
